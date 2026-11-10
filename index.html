@@ -2554,6 +2554,29 @@ const uid = () => (crypto.randomUUID ? crypto.randomUUID() : 'id-' + Date.now().
 const norm = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
 const today = () => new Date().toISOString().slice(0, 10);
 const clone = (o) => JSON.parse(JSON.stringify(o));
+/* ---------- sécurité : tout ce qui vient d'une carte reçue ou d'un fichier est nettoyé ---------- */
+const num = (v, min, max) => { if (v === null || v === undefined || v === '') return null; v = Number(v); return Number.isFinite(v) ? Math.min(max, Math.max(min, v)) : null; };
+const note = (v) => { v = num(v, 0, 10); return v == null ? null : Math.round(v * 2) / 2; };
+const str = (v, max = 5000) => (v == null ? '' : String(v)).slice(0, max);
+const safeId = (v) => (typeof v === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(v)) ? v : uid();
+const safeImg = (v) => (typeof v === 'string' && /^data:image\/(png|jpe?g|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(v)) ? v : null;
+const safeUrl = (v) => (typeof v === 'string' && /^https?:\/\/[^\s"'<>]+$/i.test(v)) ? v.slice(0, 2000) : '';
+const safeMine = (m) => ({ rating: note(m?.rating), comment: str(m?.comment), tastedAt: str(m?.tastedAt, 20) });
+const safeOthers = (a) => (Array.isArray(a) ? a : []).slice(0, 20).map(o => ({ author: str(o?.author, 40), rating: note(o?.rating), comment: str(o?.comment), at: str(o?.at, 20) }));
+function sanitizeItem(it) {
+  if (!it || (it.kind !== 'recipe' && it.kind !== 'bottle')) return null;
+  const base = { id: safeId(it.id), kind: it.kind, createdAt: num(it.createdAt, 0, 1e14) || Date.now(), updatedAt: num(it.updatedAt, 0, 1e14) || 0,
+    photo: safeImg(it.photo), mine: safeMine(it.mine), others: safeOthers(it.others), demo: !!it.demo,
+    origin: it.origin ? { author: str(it.origin.author, 40), fromId: str(it.origin.fromId, 64), title: str(it.origin.title, 200) } : null };
+  if (it.kind === 'recipe') return { ...base, base: cleanRecipe(it.base || {}), current: it.current ? cleanRecipe(it.current) : null, favorite: !!it.favorite, sourceUrl: safeUrl(it.sourceUrl) };
+  const b = cleanBottle(it.base || {}); b.price = num(it.base?.price, 0, 1e6);
+  return { ...base, base: b };
+}
+function sanitizePayload(p) {
+  if (!p || typeof p !== 'object' || !p.d || (p.k !== 'r' && p.k !== 'b')) return null;
+  return { v: 1, k: p.k, id: safeId(p.id), by: str(p.by, 40) || 'Quelqu’un', d: p.d, src: safeUrl(p.src), mod: !!p.mod,
+    av: p.av && note(p.av.r) != null ? { r: note(p.av.r), c: str(p.av.c) } : null };
+}
 
 const ICONS = {
   book: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M4 19.5V21h16"/></svg>',
@@ -2764,18 +2787,18 @@ const imgBlock = (dataUrl) => ({ type: 'image', source: { type: 'base64', media_
 
 function cleanRecipe(j) {
   return {
-    title: j.title || 'Recette sans titre',
-    category: RECIPE_CATS[j.category] ? j.category : 'autre',
-    servings: j.servings || null, prepMin: j.prepMin || null, cookMin: j.cookMin || null,
+    title: str(j.title, 200) || 'Recette sans titre',
+    category: Object.hasOwn(RECIPE_CATS, j.category) ? j.category : 'autre',
+    servings: num(j.servings, 1, 1000), prepMin: num(j.prepMin, 0, 10000), cookMin: num(j.cookMin, 0, 10000),
     difficulty: DIFFS.includes(j.difficulty) ? j.difficulty : 'Facile',
-    ingredients: (j.ingredients || []).filter(i => i && i.name).map(i => ({ qty: typeof i.qty === 'number' ? i.qty : null, unit: i.unit || '', name: i.name })),
-    steps: (j.steps || []).filter(Boolean), tags: j.tags || [], notes: j.notes || '',
+    ingredients: (Array.isArray(j.ingredients) ? j.ingredients : []).filter(i => i && i.name).slice(0, 200).map(i => ({ qty: num(i.qty, 0, 1e6), unit: str(i.unit, 40), name: str(i.name, 300) })),
+    steps: (Array.isArray(j.steps) ? j.steps : []).filter(Boolean).slice(0, 200).map(x => str(x, 3000)), tags: (Array.isArray(j.tags) ? j.tags : []).slice(0, 30).map(x => str(x, 40)), notes: str(j.notes),
   };
 }
 function cleanBottle(j) {
-  const cat = BAR_CATS[j.category] ? j.category : 'autre';
-  const extra = {}; for (const [k] of BAR_CATS[cat].extra) extra[k] = j.extra?.[k] || '';
-  return { name: j.name || '', category: cat, brand: j.brand || '', country: j.country || '', abv: j.abv ?? null, description: j.description || '', price: null, extra };
+  const cat = Object.hasOwn(BAR_CATS, j.category) ? j.category : 'autre';
+  const extra = {}; for (const [k] of BAR_CATS[cat].extra) extra[k] = str(j.extra?.[k], 300);
+  return { name: str(j.name, 200), category: cat, brand: str(j.brand, 200), country: str(j.country, 100), abv: num(j.abv, 0, 100), description: str(j.description), price: null, extra };
 }
 
 /* =====================================================================
@@ -2812,7 +2835,8 @@ function cardPayload(item, withAvis) {
 }
 
 async function handleIncoming(p, photo) {
-  if (!p || !p.v || !p.d) { toast('Carte invalide'); return; }
+  p = sanitizePayload(p); photo = safeImg(photo);
+  if (!p) { toast('Carte invalide'); return; }
   if (p.k === 'r') return incomingRecipe(p, photo);
   if (p.k === 'b') return incomingBottle(p, photo);
 }
@@ -2838,7 +2862,7 @@ async function incomingRecipe(p, photo) {
 }
 async function incomingBottle(p, photo) {
   const d = cleanBottle({ ...p.d, extra: p.d.extra });
-  d.price = p.d.price ?? null;
+  d.price = num(p.d.price, 0, 1e6);
   const same = byId(p.id) || bottles().find(b => norm(b.base.name) === norm(d.name) && norm(b.base.brand) === norm(d.brand));
   const avisTxt = p.av ? `<br>Avis de ${esc(p.by)} : <b>${fmtNote(p.av.r)}/10</b>${p.av.c ? ' — « ' + esc(p.av.c) + ' »' : ''}` : '';
   const choice = await previewSheet({
@@ -3351,7 +3375,7 @@ function importFile() {
       const items = data.items || [];
       if (!await confirmSheet(`Importer ${items.length} cartes ? Les cartes existantes plus récentes sont conservées.`, 'Importer', false)) return;
       let n = 0;
-      for (const it of items) { const cur = byId(it.id); if (!cur || (it.updatedAt || 0) > (cur.updatedAt || 0)) { await Store.put(it); n++; } }
+      for (const raw of items) { const it = sanitizeItem(raw); if (!it) continue; const cur = byId(it.id); if (!cur || (it.updatedAt || 0) > (cur.updatedAt || 0)) { const keep = it.updatedAt; await Store.put(it); n++; } }
       S.items = await Store.all(); render(); toast(n + ' carte(s) importée(s)');
     }
   };

@@ -1,0 +1,3508 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2f6f5e">
+<title>Titi-Sti</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+:root{
+  --bg:#f6f5f2; --surface:#ffffff; --surface2:#efede8; --text:#1d1d1f; --muted:#6b6b70; --line:#e2dfd8;
+  --accent:#2f6f5e; --accent-text:#fff; --danger:#c0392b;
+  --paper:#fbf6ea; --paper-text:#2b2418; --paper-line:#e8dcc0;
+  --radius:16px; --shadow:0 2px 10px rgba(0,0,0,.08);
+  --tabbar:68px;
+}
+[data-theme="dark"]{
+  --bg:#121214; --surface:#1d1d20; --surface2:#26262a; --text:#f2f2f4; --muted:#a0a0a8; --line:#33333a;
+  --accent:#5fbf9f; --accent-text:#0d1f19;
+  --paper:#24211b; --paper-text:#f1e9d6; --paper-line:#3d3628;
+  --shadow:0 2px 10px rgba(0,0,0,.4);
+}
+html{font-size:100%}
+html[data-fs="l"]{font-size:112.5%}
+html[data-fs="xl"]{font-size:127%}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.45;padding-bottom:calc(var(--tabbar) + env(safe-area-inset-bottom))}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+h1,h2,h3{margin:0;line-height:1.2}
+.hidden{display:none!important}
+
+/* ---------- top bar ---------- */
+.topbar{position:sticky;top:0;z-index:20;background:var(--bg);padding:calc(14px + env(safe-area-inset-top)) 16px 10px;border-bottom:1px solid transparent}
+.topbar h1{font-size:1.6rem;font-weight:750;letter-spacing:-.02em}
+.search{margin-top:10px;width:100%;border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:12px 14px;font-size:1rem}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:10px 0 2px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:7px 14px;font-size:.9rem;white-space:nowrap}
+.chip.on{background:var(--text);color:var(--bg);border-color:var(--text)}
+
+/* ---------- tab bar ---------- */
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:30;height:calc(var(--tabbar) + env(safe-area-inset-bottom));padding-bottom:env(safe-area-inset-bottom);background:var(--surface);border-top:1px solid var(--line);display:flex}
+.tabbar button{flex:1;border:0;background:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:.78rem;color:var(--muted)}
+.tabbar button svg{width:26px;height:26px}
+.tabbar button.on{color:var(--accent);font-weight:650}
+
+/* ---------- FAB ---------- */
+.fab{position:fixed;right:18px;bottom:calc(var(--tabbar) + 18px + env(safe-area-inset-bottom));z-index:25;width:62px;height:62px;border-radius:50%;border:0;background:var(--accent);color:var(--accent-text);box-shadow:0 6px 18px rgba(0,0,0,.25);display:flex;align-items:center;justify-content:center}
+.fab svg{width:30px;height:30px}
+
+/* ---------- grid of collectible cards ---------- */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:14px;padding:12px 16px 100px}
+.card{position:relative;border:0;padding:5px;border-radius:18px;background:var(--cat,#888);text-align:left;box-shadow:var(--shadow);display:flex;flex-direction:column;min-width:0}
+.card-inner{background:var(--surface);border-radius:13px;overflow:hidden;display:flex;flex-direction:column;flex:1}
+.card-photo{aspect-ratio:4/3;background:linear-gradient(135deg,var(--cat,#888),color-mix(in srgb,var(--cat,#888) 45%,#000));display:flex;align-items:center;justify-content:center;color:#fff;font-size:2.4rem;font-weight:800;overflow:hidden}
+.card-photo img{width:100%;height:100%;object-fit:cover;display:block}
+.card-body{padding:9px 10px 10px;display:flex;flex-direction:column;gap:4px;flex:1}
+.card-title{font-weight:700;font-size:.98rem;line-height:1.2;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.card-meta{font-size:.78rem;color:var(--muted);display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.card-tag{position:absolute;top:12px;left:12px;background:rgba(0,0,0,.55);color:#fff;font-size:.7rem;font-weight:700;padding:3px 8px;border-radius:999px;text-transform:uppercase;letter-spacing:.04em}
+.card-fav{position:absolute;top:12px;right:12px;background:rgba(0,0,0,.55);color:#ffd54a;border-radius:999px;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:.9rem}
+.card-score{position:absolute;top:10px;right:10px;background:var(--surface);color:var(--text);font-weight:800;border-radius:12px;padding:3px 9px;font-size:1rem;box-shadow:var(--shadow)}
+.rarity{font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--r)}
+.card.r-epique{box-shadow:0 0 0 2px #8e44d1,0 0 16px rgba(142,68,209,.45)}
+.card.r-legendaire{background:linear-gradient(135deg,#f6d365,#d4a017,#fff1b8,#d4a017);background-size:300% 300%;animation:shine 4s ease infinite;box-shadow:0 0 18px rgba(212,160,23,.55)}
+@keyframes shine{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+.badge-mod{background:#f2a33a;color:#2a1a00;font-size:.68rem;font-weight:800;padding:2px 7px;border-radius:999px}
+.empty{padding:50px 24px;text-align:center;color:var(--muted)}
+.empty b{display:block;color:var(--text);font-size:1.1rem;margin-bottom:6px}
+
+/* ---------- podium ---------- */
+.podium{display:flex;align-items:flex-end;justify-content:center;gap:10px;padding:8px 16px 4px}
+.pod{flex:1;max-width:120px;display:flex;flex-direction:column;align-items:center;gap:6px;border:0;background:none;padding:0}
+.pod-img{width:64px;height:64px;border-radius:50%;border:4px solid var(--cat);background:var(--surface2);overflow:hidden;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.4rem;color:var(--cat)}
+.pod-img img{width:100%;height:100%;object-fit:cover}
+.pod-name{font-size:.8rem;font-weight:650;text-align:center;line-height:1.15;max-width:100%;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.pod-step{width:100%;border-radius:10px 10px 0 0;display:flex;align-items:flex-start;justify-content:center;font-weight:900;font-size:1.3rem;color:#fff;padding-top:6px}
+.pod.p1 .pod-step{height:74px;background:linear-gradient(#e8b923,#c99a10)}
+.pod.p2 .pod-step{height:54px;background:linear-gradient(#b9c0c7,#8e979f)}
+.pod.p3 .pod-step{height:40px;background:linear-gradient(#d39a6a,#a8693a)}
+.section-label{padding:14px 16px 0;font-size:.8rem;font-weight:750;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+
+/* ---------- screens (full-page overlays) ---------- */
+.screen{position:fixed;inset:0;z-index:40;background:var(--bg);overflow-y:auto;animation:slidein .18s ease-out;padding-bottom:40px}
+@keyframes slidein{from{transform:translateX(30px);opacity:.4}to{transform:none;opacity:1}}
+.screen-bar{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:6px;padding:calc(10px + env(safe-area-inset-top)) 10px 10px;background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.screen-bar h2{flex:1;font-size:1.08rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.icon-btn{border:0;background:var(--surface);width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex:none;box-shadow:var(--shadow)}
+.icon-btn svg{width:24px;height:24px}
+.icon-btn.on{color:#e0a800}
+
+/* ---------- recipe detail: notebook ---------- */
+.paper{background:var(--paper);color:var(--paper-text);min-height:100%}
+.hero{width:100%;aspect-ratio:16/10;object-fit:cover;display:block;background:var(--surface2)}
+.hero-ph{width:100%;aspect-ratio:16/10;display:flex;align-items:center;justify-content:center;font-size:4rem;font-weight:800;color:#fff;background:linear-gradient(135deg,var(--cat),color-mix(in srgb,var(--cat) 40%,#000))}
+.nb{padding:18px 20px 30px;font-family:"Iowan Old Style","Palatino Linotype",Georgia,"Noto Serif",serif}
+.nb h1{font-size:1.75rem;font-weight:700;margin-bottom:6px}
+.nb .origin{font-family:system-ui,sans-serif;font-size:.85rem;opacity:.75;margin:4px 0}
+.nb .facts{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 4px;font-family:system-ui,sans-serif}
+.fact{background:color-mix(in srgb,var(--paper-text) 8%,transparent);border-radius:10px;padding:6px 10px;font-size:.88rem}
+.nb h3{font-size:1.25rem;margin:22px 0 10px;padding-bottom:6px;border-bottom:2px solid var(--paper-line)}
+.ing{list-style:none;padding:0;margin:0}
+.ing li{padding:9px 0;border-bottom:1px dashed var(--paper-line);font-size:1.08rem;display:flex;gap:10px}
+.ing li .q{font-weight:700;min-width:78px;font-family:system-ui,sans-serif}
+.steps{padding-left:0;list-style:none;counter-reset:s;margin:0}
+.steps li{counter-increment:s;position:relative;padding:4px 0 14px 44px;font-size:1.1rem;line-height:1.55}
+.steps li::before{content:counter(s);position:absolute;left:0;top:2px;width:30px;height:30px;border-radius:50%;background:var(--cat);color:#fff;font-family:system-ui,sans-serif;font-weight:800;font-size:.95rem;display:flex;align-items:center;justify-content:center}
+.serv{display:flex;align-items:center;gap:12px;font-family:system-ui,sans-serif;margin:6px 0 2px}
+.serv button{width:42px;height:42px;border-radius:50%;border:1px solid var(--paper-line);background:transparent;font-size:1.3rem;font-weight:700}
+.serv b{font-size:1.1rem;min-width:110px;text-align:center}
+.notes{white-space:pre-wrap;font-size:1.02rem}
+.mod-banner{font-family:system-ui,sans-serif;background:#f2a33a22;border:1px solid #f2a33a;border-radius:12px;padding:10px 12px;font-size:.9rem;margin:10px 0;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.mod-banner button{border:0;background:#f2a33a;color:#2a1a00;border-radius:8px;padding:6px 10px;font-weight:700;font-size:.85rem}
+.big-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;border:0;border-radius:14px;padding:16px;font-size:1.08rem;font-weight:700;background:var(--accent);color:var(--accent-text)}
+.big-btn.sec{background:var(--surface2);color:var(--text)}
+.big-btn.danger{background:transparent;color:var(--danger);border:1px solid var(--danger)}
+.big-btn svg{width:22px;height:22px}
+.btn-row{display:flex;gap:10px;margin:14px 0}
+.btn-row .big-btn{flex:1}
+.link{color:inherit;word-break:break-all}
+
+/* ---------- bottle detail ---------- */
+.bt{padding:16px 18px}
+.bt h1{font-size:1.7rem}
+.bt .sub{color:var(--muted);margin-top:4px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:8px 16px;background:var(--surface);border-radius:var(--radius);padding:14px 16px;margin:14px 0}
+.kv dt{color:var(--muted);font-size:.9rem}
+.kv dd{margin:0;font-weight:600}
+.box{background:var(--surface);border-radius:var(--radius);padding:14px 16px;margin:14px 0}
+.box h3{font-size:1rem;margin-bottom:10px}
+.score-big{font-size:2.8rem;font-weight:900;line-height:1}
+.score-big small{font-size:1.1rem;color:var(--muted);font-weight:700}
+.avis{border-top:1px solid var(--line);padding:10px 0 2px}
+.avis:first-of-type{border-top:0}
+.avis b{margin-right:6px}
+
+/* ---------- forms ---------- */
+.form{padding:14px 16px 30px;display:flex;flex-direction:column;gap:14px}
+.field label{display:block;font-size:.85rem;font-weight:650;color:var(--muted);margin-bottom:5px}
+.field input,.field select,.field textarea{width:100%;border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:12px 13px;font-size:1rem}
+.field textarea{min-height:110px;resize:vertical;line-height:1.45}
+.field .hint{font-size:.8rem;color:var(--muted);margin-top:4px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.photo-pick{display:flex;gap:12px;align-items:center}
+.photo-pick .ph{width:96px;height:72px;border-radius:12px;background:var(--surface2);overflow:hidden;flex:none;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:.8rem}
+.photo-pick .ph img{width:100%;height:100%;object-fit:cover}
+.rating-in{display:flex;align-items:center;gap:12px}
+.rating-in input[type=range]{flex:1;accent-color:var(--accent);height:34px}
+.rating-in output{font-size:1.6rem;font-weight:900;min-width:58px;text-align:right}
+.seg{display:flex;background:var(--surface2);border-radius:12px;padding:4px;gap:4px}
+.seg button{flex:1;border:0;background:none;border-radius:9px;padding:10px 6px;font-weight:650;font-size:.92rem}
+.seg button.on{background:var(--surface);box-shadow:var(--shadow)}
+.draft-note{background:color-mix(in srgb,var(--accent) 12%,transparent);border:1px solid var(--accent);border-radius:12px;padding:10px 12px;font-size:.9rem}
+
+/* ---------- sheets (bottom modal) ---------- */
+.backdrop{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center;animation:fade .15s}
+@keyframes fade{from{opacity:0}}
+.sheet{background:var(--bg);width:100%;max-width:560px;border-radius:22px 22px 0 0;padding:10px 16px calc(20px + env(safe-area-inset-bottom));max-height:92vh;overflow-y:auto;animation:up .2s ease-out}
+@keyframes up{from{transform:translateY(40px)}}
+.sheet .grab{width:44px;height:5px;border-radius:9px;background:var(--line);margin:4px auto 12px}
+.sheet h2{font-size:1.25rem;margin-bottom:12px}
+.menu-item{display:flex;align-items:center;gap:14px;width:100%;border:0;background:var(--surface);border-radius:14px;padding:15px 14px;margin-bottom:8px;text-align:left;font-size:1.02rem}
+.menu-item svg{width:24px;height:24px;flex:none;color:var(--accent)}
+.menu-item small{display:block;color:var(--muted);font-size:.82rem}
+.loading{display:flex;flex-direction:column;align-items:center;gap:14px;padding:30px 10px;text-align:center}
+.spinner{width:44px;height:44px;border-radius:50%;border:4px solid var(--line);border-top-color:var(--accent);animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ---------- share card (flip) ---------- */
+.flip{perspective:1200px;width:min(300px,82vw);margin:6px auto 14px;aspect-ratio:5/7;cursor:pointer}
+.flip-in{position:relative;width:100%;height:100%;transition:transform .6s;transform-style:preserve-3d}
+.flip.back .flip-in{transform:rotateY(180deg)}
+.face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;border-radius:20px;padding:8px;background:var(--cat);box-shadow:0 10px 30px rgba(0,0,0,.3);display:flex}
+.face.r-legendaire{background:linear-gradient(135deg,#f6d365,#d4a017,#fff1b8,#d4a017);background-size:300% 300%;animation:shine 4s ease infinite}
+.face-in{background:var(--surface);border-radius:14px;flex:1;display:flex;flex-direction:column;overflow:hidden}
+.face .fp{flex:1.25;background:linear-gradient(135deg,var(--cat),color-mix(in srgb,var(--cat) 40%,#000));display:flex;align-items:center;justify-content:center;color:#fff;font-size:3rem;font-weight:900;overflow:hidden}
+.face .fp img{width:100%;height:100%;object-fit:cover}
+.face .ft{padding:10px 12px 12px;display:flex;flex-direction:column;gap:4px}
+.face .ft h3{font-size:1.15rem}
+.face .ft .card-meta{font-size:.82rem}
+.face.backface{transform:rotateY(180deg)}
+.face.backface .face-in{align-items:center;justify-content:center;padding:14px;gap:10px;text-align:center}
+.qr{width:100%;max-width:240px;background:#fff;border-radius:10px;padding:6px}
+.qr svg{width:100%;height:auto;display:block}
+.flip-hint{text-align:center;font-size:.85rem;color:var(--muted);margin-top:-6px;margin-bottom:12px}
+.check{display:flex;align-items:center;gap:10px;padding:10px 4px;font-size:1rem}
+.check input{width:22px;height:22px;accent-color:var(--accent)}
+
+/* ---------- cooking mode ---------- */
+.cook{position:fixed;inset:0;z-index:80;background:#111;color:#f5f5f5;display:flex;flex-direction:column}
+.cook-top{display:flex;align-items:center;gap:10px;padding:12px 14px}
+.cook-top .prog{flex:1;height:8px;border-radius:9px;background:#333;overflow:hidden}
+.cook-top .prog i{display:block;height:100%;background:var(--cat,#5fbf9f)}
+.cook-top button{border:0;background:#2a2a2a;color:#fff;border-radius:12px;padding:12px 14px;font-weight:700;font-size:1rem}
+.cook-body{flex:1;overflow-y:auto;padding:16px 22px;display:flex;flex-direction:column;justify-content:center}
+.cook-n{font-size:1rem;color:#aaa;font-weight:700;margin-bottom:10px;text-transform:uppercase;letter-spacing:.08em}
+.cook-step{font-size:1.75rem;line-height:1.45;font-weight:500}
+.cook-ing{font-size:1.3rem;line-height:1.7}
+.cook-nav{display:flex;gap:12px;padding:12px 14px calc(16px + env(safe-area-inset-bottom))}
+.cook-nav button{flex:1;border:0;border-radius:18px;padding:24px 10px;font-size:1.25rem;font-weight:800;background:#2a2a2a;color:#fff}
+.cook-nav button.next{background:var(--cat,#5fbf9f);color:#fff;flex:1.6}
+
+/* ---------- settings ---------- */
+.set{padding:8px 16px 100px}
+.set .box{display:flex;flex-direction:column;gap:12px}
+.warn{background:#f2a33a22;border:1px solid #f2a33a;border-radius:12px;padding:10px 12px;font-size:.9rem}
+.toast{position:fixed;left:50%;bottom:calc(var(--tabbar) + 90px);transform:translateX(-50%);z-index:100;background:var(--text);color:var(--bg);padding:12px 18px;border-radius:12px;font-weight:600;box-shadow:0 6px 20px rgba(0,0,0,.3);max-width:90vw;text-align:center;animation:fade .2s}
+
+.preview-banner{background:#f2a33a;color:#2a1a00;font-size:.82rem;font-weight:600;padding:8px 14px;text-align:center}
+
+</style>
+</head>
+<body>
+<main id="main"></main>
+<button class="fab" id="fab" aria-label="Ajouter"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+<nav class="tabbar">
+  <button data-tab="recipes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M4 19.5V21h16"/></svg>Recettes</button>
+  <button data-tab="bar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h14l-7 9z"/><path d="M12 12v8"/><path d="M8 21h8"/></svg>Bar</button>
+  <button data-tab="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v3M12 20v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M1 12h3M20 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>Réglages</button>
+</nav>
+<script>
+//---------------------------------------------------------------------
+//
+// QR Code Generator for JavaScript
+//
+// Copyright (c) 2009 Kazuhiko Arase
+//
+// URL: http://www.d-project.com/
+//
+// Licensed under the MIT license:
+//  http://www.opensource.org/licenses/mit-license.php
+//
+// The word 'QR Code' is registered trademark of
+// DENSO WAVE INCORPORATED
+//  http://www.denso-wave.com/qrcode/faqpatent-e.html
+//
+//---------------------------------------------------------------------
+
+var qrcode = function() {
+
+  //---------------------------------------------------------------------
+  // qrcode
+  //---------------------------------------------------------------------
+
+  /**
+   * qrcode
+   * @param typeNumber 1 to 40
+   * @param errorCorrectionLevel 'L','M','Q','H'
+   */
+  var qrcode = function(typeNumber, errorCorrectionLevel) {
+
+    var PAD0 = 0xEC;
+    var PAD1 = 0x11;
+
+    var _typeNumber = typeNumber;
+    var _errorCorrectionLevel = QRErrorCorrectionLevel[errorCorrectionLevel];
+    var _modules = null;
+    var _moduleCount = 0;
+    var _dataCache = null;
+    var _dataList = [];
+
+    var _this = {};
+
+    var makeImpl = function(test, maskPattern) {
+
+      _moduleCount = _typeNumber * 4 + 17;
+      _modules = function(moduleCount) {
+        var modules = new Array(moduleCount);
+        for (var row = 0; row < moduleCount; row += 1) {
+          modules[row] = new Array(moduleCount);
+          for (var col = 0; col < moduleCount; col += 1) {
+            modules[row][col] = null;
+          }
+        }
+        return modules;
+      }(_moduleCount);
+
+      setupPositionProbePattern(0, 0);
+      setupPositionProbePattern(_moduleCount - 7, 0);
+      setupPositionProbePattern(0, _moduleCount - 7);
+      setupPositionAdjustPattern();
+      setupTimingPattern();
+      setupTypeInfo(test, maskPattern);
+
+      if (_typeNumber >= 7) {
+        setupTypeNumber(test);
+      }
+
+      if (_dataCache == null) {
+        _dataCache = createData(_typeNumber, _errorCorrectionLevel, _dataList);
+      }
+
+      mapData(_dataCache, maskPattern);
+    };
+
+    var setupPositionProbePattern = function(row, col) {
+
+      for (var r = -1; r <= 7; r += 1) {
+
+        if (row + r <= -1 || _moduleCount <= row + r) continue;
+
+        for (var c = -1; c <= 7; c += 1) {
+
+          if (col + c <= -1 || _moduleCount <= col + c) continue;
+
+          if ( (0 <= r && r <= 6 && (c == 0 || c == 6) )
+              || (0 <= c && c <= 6 && (r == 0 || r == 6) )
+              || (2 <= r && r <= 4 && 2 <= c && c <= 4) ) {
+            _modules[row + r][col + c] = true;
+          } else {
+            _modules[row + r][col + c] = false;
+          }
+        }
+      }
+    };
+
+    var getBestMaskPattern = function() {
+
+      var minLostPoint = 0;
+      var pattern = 0;
+
+      for (var i = 0; i < 8; i += 1) {
+
+        makeImpl(true, i);
+
+        var lostPoint = QRUtil.getLostPoint(_this);
+
+        if (i == 0 || minLostPoint > lostPoint) {
+          minLostPoint = lostPoint;
+          pattern = i;
+        }
+      }
+
+      return pattern;
+    };
+
+    var setupTimingPattern = function() {
+
+      for (var r = 8; r < _moduleCount - 8; r += 1) {
+        if (_modules[r][6] != null) {
+          continue;
+        }
+        _modules[r][6] = (r % 2 == 0);
+      }
+
+      for (var c = 8; c < _moduleCount - 8; c += 1) {
+        if (_modules[6][c] != null) {
+          continue;
+        }
+        _modules[6][c] = (c % 2 == 0);
+      }
+    };
+
+    var setupPositionAdjustPattern = function() {
+
+      var pos = QRUtil.getPatternPosition(_typeNumber);
+
+      for (var i = 0; i < pos.length; i += 1) {
+
+        for (var j = 0; j < pos.length; j += 1) {
+
+          var row = pos[i];
+          var col = pos[j];
+
+          if (_modules[row][col] != null) {
+            continue;
+          }
+
+          for (var r = -2; r <= 2; r += 1) {
+
+            for (var c = -2; c <= 2; c += 1) {
+
+              if (r == -2 || r == 2 || c == -2 || c == 2
+                  || (r == 0 && c == 0) ) {
+                _modules[row + r][col + c] = true;
+              } else {
+                _modules[row + r][col + c] = false;
+              }
+            }
+          }
+        }
+      }
+    };
+
+    var setupTypeNumber = function(test) {
+
+      var bits = QRUtil.getBCHTypeNumber(_typeNumber);
+
+      for (var i = 0; i < 18; i += 1) {
+        var mod = (!test && ( (bits >> i) & 1) == 1);
+        _modules[Math.floor(i / 3)][i % 3 + _moduleCount - 8 - 3] = mod;
+      }
+
+      for (var i = 0; i < 18; i += 1) {
+        var mod = (!test && ( (bits >> i) & 1) == 1);
+        _modules[i % 3 + _moduleCount - 8 - 3][Math.floor(i / 3)] = mod;
+      }
+    };
+
+    var setupTypeInfo = function(test, maskPattern) {
+
+      var data = (_errorCorrectionLevel << 3) | maskPattern;
+      var bits = QRUtil.getBCHTypeInfo(data);
+
+      // vertical
+      for (var i = 0; i < 15; i += 1) {
+
+        var mod = (!test && ( (bits >> i) & 1) == 1);
+
+        if (i < 6) {
+          _modules[i][8] = mod;
+        } else if (i < 8) {
+          _modules[i + 1][8] = mod;
+        } else {
+          _modules[_moduleCount - 15 + i][8] = mod;
+        }
+      }
+
+      // horizontal
+      for (var i = 0; i < 15; i += 1) {
+
+        var mod = (!test && ( (bits >> i) & 1) == 1);
+
+        if (i < 8) {
+          _modules[8][_moduleCount - i - 1] = mod;
+        } else if (i < 9) {
+          _modules[8][15 - i - 1 + 1] = mod;
+        } else {
+          _modules[8][15 - i - 1] = mod;
+        }
+      }
+
+      // fixed module
+      _modules[_moduleCount - 8][8] = (!test);
+    };
+
+    var mapData = function(data, maskPattern) {
+
+      var inc = -1;
+      var row = _moduleCount - 1;
+      var bitIndex = 7;
+      var byteIndex = 0;
+      var maskFunc = QRUtil.getMaskFunction(maskPattern);
+
+      for (var col = _moduleCount - 1; col > 0; col -= 2) {
+
+        if (col == 6) col -= 1;
+
+        while (true) {
+
+          for (var c = 0; c < 2; c += 1) {
+
+            if (_modules[row][col - c] == null) {
+
+              var dark = false;
+
+              if (byteIndex < data.length) {
+                dark = ( ( (data[byteIndex] >>> bitIndex) & 1) == 1);
+              }
+
+              var mask = maskFunc(row, col - c);
+
+              if (mask) {
+                dark = !dark;
+              }
+
+              _modules[row][col - c] = dark;
+              bitIndex -= 1;
+
+              if (bitIndex == -1) {
+                byteIndex += 1;
+                bitIndex = 7;
+              }
+            }
+          }
+
+          row += inc;
+
+          if (row < 0 || _moduleCount <= row) {
+            row -= inc;
+            inc = -inc;
+            break;
+          }
+        }
+      }
+    };
+
+    var createBytes = function(buffer, rsBlocks) {
+
+      var offset = 0;
+
+      var maxDcCount = 0;
+      var maxEcCount = 0;
+
+      var dcdata = new Array(rsBlocks.length);
+      var ecdata = new Array(rsBlocks.length);
+
+      for (var r = 0; r < rsBlocks.length; r += 1) {
+
+        var dcCount = rsBlocks[r].dataCount;
+        var ecCount = rsBlocks[r].totalCount - dcCount;
+
+        maxDcCount = Math.max(maxDcCount, dcCount);
+        maxEcCount = Math.max(maxEcCount, ecCount);
+
+        dcdata[r] = new Array(dcCount);
+
+        for (var i = 0; i < dcdata[r].length; i += 1) {
+          dcdata[r][i] = 0xff & buffer.getBuffer()[i + offset];
+        }
+        offset += dcCount;
+
+        var rsPoly = QRUtil.getErrorCorrectPolynomial(ecCount);
+        var rawPoly = qrPolynomial(dcdata[r], rsPoly.getLength() - 1);
+
+        var modPoly = rawPoly.mod(rsPoly);
+        ecdata[r] = new Array(rsPoly.getLength() - 1);
+        for (var i = 0; i < ecdata[r].length; i += 1) {
+          var modIndex = i + modPoly.getLength() - ecdata[r].length;
+          ecdata[r][i] = (modIndex >= 0)? modPoly.getAt(modIndex) : 0;
+        }
+      }
+
+      var totalCodeCount = 0;
+      for (var i = 0; i < rsBlocks.length; i += 1) {
+        totalCodeCount += rsBlocks[i].totalCount;
+      }
+
+      var data = new Array(totalCodeCount);
+      var index = 0;
+
+      for (var i = 0; i < maxDcCount; i += 1) {
+        for (var r = 0; r < rsBlocks.length; r += 1) {
+          if (i < dcdata[r].length) {
+            data[index] = dcdata[r][i];
+            index += 1;
+          }
+        }
+      }
+
+      for (var i = 0; i < maxEcCount; i += 1) {
+        for (var r = 0; r < rsBlocks.length; r += 1) {
+          if (i < ecdata[r].length) {
+            data[index] = ecdata[r][i];
+            index += 1;
+          }
+        }
+      }
+
+      return data;
+    };
+
+    var createData = function(typeNumber, errorCorrectionLevel, dataList) {
+
+      var rsBlocks = QRRSBlock.getRSBlocks(typeNumber, errorCorrectionLevel);
+
+      var buffer = qrBitBuffer();
+
+      for (var i = 0; i < dataList.length; i += 1) {
+        var data = dataList[i];
+        buffer.put(data.getMode(), 4);
+        buffer.put(data.getLength(), QRUtil.getLengthInBits(data.getMode(), typeNumber) );
+        data.write(buffer);
+      }
+
+      // calc num max data.
+      var totalDataCount = 0;
+      for (var i = 0; i < rsBlocks.length; i += 1) {
+        totalDataCount += rsBlocks[i].dataCount;
+      }
+
+      if (buffer.getLengthInBits() > totalDataCount * 8) {
+        throw 'code length overflow. ('
+          + buffer.getLengthInBits()
+          + '>'
+          + totalDataCount * 8
+          + ')';
+      }
+
+      // end code
+      if (buffer.getLengthInBits() + 4 <= totalDataCount * 8) {
+        buffer.put(0, 4);
+      }
+
+      // padding
+      while (buffer.getLengthInBits() % 8 != 0) {
+        buffer.putBit(false);
+      }
+
+      // padding
+      while (true) {
+
+        if (buffer.getLengthInBits() >= totalDataCount * 8) {
+          break;
+        }
+        buffer.put(PAD0, 8);
+
+        if (buffer.getLengthInBits() >= totalDataCount * 8) {
+          break;
+        }
+        buffer.put(PAD1, 8);
+      }
+
+      return createBytes(buffer, rsBlocks);
+    };
+
+    _this.addData = function(data, mode) {
+
+      mode = mode || 'Byte';
+
+      var newData = null;
+
+      switch(mode) {
+      case 'Numeric' :
+        newData = qrNumber(data);
+        break;
+      case 'Alphanumeric' :
+        newData = qrAlphaNum(data);
+        break;
+      case 'Byte' :
+        newData = qr8BitByte(data);
+        break;
+      case 'Kanji' :
+        newData = qrKanji(data);
+        break;
+      default :
+        throw 'mode:' + mode;
+      }
+
+      _dataList.push(newData);
+      _dataCache = null;
+    };
+
+    _this.isDark = function(row, col) {
+      if (row < 0 || _moduleCount <= row || col < 0 || _moduleCount <= col) {
+        throw row + ',' + col;
+      }
+      return _modules[row][col];
+    };
+
+    _this.getModuleCount = function() {
+      return _moduleCount;
+    };
+
+    _this.make = function() {
+      if (_typeNumber < 1) {
+        var typeNumber = 1;
+
+        for (; typeNumber < 40; typeNumber++) {
+          var rsBlocks = QRRSBlock.getRSBlocks(typeNumber, _errorCorrectionLevel);
+          var buffer = qrBitBuffer();
+
+          for (var i = 0; i < _dataList.length; i++) {
+            var data = _dataList[i];
+            buffer.put(data.getMode(), 4);
+            buffer.put(data.getLength(), QRUtil.getLengthInBits(data.getMode(), typeNumber) );
+            data.write(buffer);
+          }
+
+          var totalDataCount = 0;
+          for (var i = 0; i < rsBlocks.length; i++) {
+            totalDataCount += rsBlocks[i].dataCount;
+          }
+
+          if (buffer.getLengthInBits() <= totalDataCount * 8) {
+            break;
+          }
+        }
+
+        _typeNumber = typeNumber;
+      }
+
+      makeImpl(false, getBestMaskPattern() );
+    };
+
+    _this.createTableTag = function(cellSize, margin) {
+
+      cellSize = cellSize || 2;
+      margin = (typeof margin == 'undefined')? cellSize * 4 : margin;
+
+      var qrHtml = '';
+
+      qrHtml += '<table style="';
+      qrHtml += ' border-width: 0px; border-style: none;';
+      qrHtml += ' border-collapse: collapse;';
+      qrHtml += ' padding: 0px; margin: ' + margin + 'px;';
+      qrHtml += '">';
+      qrHtml += '<tbody>';
+
+      for (var r = 0; r < _this.getModuleCount(); r += 1) {
+
+        qrHtml += '<tr>';
+
+        for (var c = 0; c < _this.getModuleCount(); c += 1) {
+          qrHtml += '<td style="';
+          qrHtml += ' border-width: 0px; border-style: none;';
+          qrHtml += ' border-collapse: collapse;';
+          qrHtml += ' padding: 0px; margin: 0px;';
+          qrHtml += ' width: ' + cellSize + 'px;';
+          qrHtml += ' height: ' + cellSize + 'px;';
+          qrHtml += ' background-color: ';
+          qrHtml += _this.isDark(r, c)? '#000000' : '#ffffff';
+          qrHtml += ';';
+          qrHtml += '"/>';
+        }
+
+        qrHtml += '</tr>';
+      }
+
+      qrHtml += '</tbody>';
+      qrHtml += '</table>';
+
+      return qrHtml;
+    };
+
+    _this.createSvgTag = function(cellSize, margin, alt, title) {
+
+      var opts = {};
+      if (typeof arguments[0] == 'object') {
+        // Called by options.
+        opts = arguments[0];
+        // overwrite cellSize and margin.
+        cellSize = opts.cellSize;
+        margin = opts.margin;
+        alt = opts.alt;
+        title = opts.title;
+      }
+
+      cellSize = cellSize || 2;
+      margin = (typeof margin == 'undefined')? cellSize * 4 : margin;
+
+      // Compose alt property surrogate
+      alt = (typeof alt === 'string') ? {text: alt} : alt || {};
+      alt.text = alt.text || null;
+      alt.id = (alt.text) ? alt.id || 'qrcode-description' : null;
+
+      // Compose title property surrogate
+      title = (typeof title === 'string') ? {text: title} : title || {};
+      title.text = title.text || null;
+      title.id = (title.text) ? title.id || 'qrcode-title' : null;
+
+      var size = _this.getModuleCount() * cellSize + margin * 2;
+      var c, mc, r, mr, qrSvg='', rect;
+
+      rect = 'l' + cellSize + ',0 0,' + cellSize +
+        ' -' + cellSize + ',0 0,-' + cellSize + 'z ';
+
+      qrSvg += '<svg version="1.1" xmlns="http://www.w3.org/2000/svg"';
+      qrSvg += !opts.scalable ? ' width="' + size + 'px" height="' + size + 'px"' : '';
+      qrSvg += ' viewBox="0 0 ' + size + ' ' + size + '" ';
+      qrSvg += ' preserveAspectRatio="xMinYMin meet"';
+      qrSvg += (title.text || alt.text) ? ' role="img" aria-labelledby="' +
+          escapeXml([title.id, alt.id].join(' ').trim() ) + '"' : '';
+      qrSvg += '>';
+      qrSvg += (title.text) ? '<title id="' + escapeXml(title.id) + '">' +
+          escapeXml(title.text) + '</title>' : '';
+      qrSvg += (alt.text) ? '<description id="' + escapeXml(alt.id) + '">' +
+          escapeXml(alt.text) + '</description>' : '';
+      qrSvg += '<rect width="100%" height="100%" fill="white" cx="0" cy="0"/>';
+      qrSvg += '<path d="';
+
+      for (r = 0; r < _this.getModuleCount(); r += 1) {
+        mr = r * cellSize + margin;
+        for (c = 0; c < _this.getModuleCount(); c += 1) {
+          if (_this.isDark(r, c) ) {
+            mc = c*cellSize+margin;
+            qrSvg += 'M' + mc + ',' + mr + rect;
+          }
+        }
+      }
+
+      qrSvg += '" stroke="transparent" fill="black"/>';
+      qrSvg += '</svg>';
+
+      return qrSvg;
+    };
+
+    _this.createDataURL = function(cellSize, margin) {
+
+      cellSize = cellSize || 2;
+      margin = (typeof margin == 'undefined')? cellSize * 4 : margin;
+
+      var size = _this.getModuleCount() * cellSize + margin * 2;
+      var min = margin;
+      var max = size - margin;
+
+      return createDataURL(size, size, function(x, y) {
+        if (min <= x && x < max && min <= y && y < max) {
+          var c = Math.floor( (x - min) / cellSize);
+          var r = Math.floor( (y - min) / cellSize);
+          return _this.isDark(r, c)? 0 : 1;
+        } else {
+          return 1;
+        }
+      } );
+    };
+
+    _this.createImgTag = function(cellSize, margin, alt) {
+
+      cellSize = cellSize || 2;
+      margin = (typeof margin == 'undefined')? cellSize * 4 : margin;
+
+      var size = _this.getModuleCount() * cellSize + margin * 2;
+
+      var img = '';
+      img += '<img';
+      img += '\u0020src="';
+      img += _this.createDataURL(cellSize, margin);
+      img += '"';
+      img += '\u0020width="';
+      img += size;
+      img += '"';
+      img += '\u0020height="';
+      img += size;
+      img += '"';
+      if (alt) {
+        img += '\u0020alt="';
+        img += escapeXml(alt);
+        img += '"';
+      }
+      img += '/>';
+
+      return img;
+    };
+
+    var escapeXml = function(s) {
+      var escaped = '';
+      for (var i = 0; i < s.length; i += 1) {
+        var c = s.charAt(i);
+        switch(c) {
+        case '<': escaped += '&lt;'; break;
+        case '>': escaped += '&gt;'; break;
+        case '&': escaped += '&amp;'; break;
+        case '"': escaped += '&quot;'; break;
+        default : escaped += c; break;
+        }
+      }
+      return escaped;
+    };
+
+    var _createHalfASCII = function(margin) {
+      var cellSize = 1;
+      margin = (typeof margin == 'undefined')? cellSize * 2 : margin;
+
+      var size = _this.getModuleCount() * cellSize + margin * 2;
+      var min = margin;
+      var max = size - margin;
+
+      var y, x, r1, r2, p;
+
+      var blocks = {
+        '██': '█',
+        '█ ': '▀',
+        ' █': '▄',
+        '  ': ' '
+      };
+
+      var blocksLastLineNoMargin = {
+        '██': '▀',
+        '█ ': '▀',
+        ' █': ' ',
+        '  ': ' '
+      };
+
+      var ascii = '';
+      for (y = 0; y < size; y += 2) {
+        r1 = Math.floor((y - min) / cellSize);
+        r2 = Math.floor((y + 1 - min) / cellSize);
+        for (x = 0; x < size; x += 1) {
+          p = '█';
+
+          if (min <= x && x < max && min <= y && y < max && _this.isDark(r1, Math.floor((x - min) / cellSize))) {
+            p = ' ';
+          }
+
+          if (min <= x && x < max && min <= y+1 && y+1 < max && _this.isDark(r2, Math.floor((x - min) / cellSize))) {
+            p += ' ';
+          }
+          else {
+            p += '█';
+          }
+
+          // Output 2 characters per pixel, to create full square. 1 character per pixels gives only half width of square.
+          ascii += (margin < 1 && y+1 >= max) ? blocksLastLineNoMargin[p] : blocks[p];
+        }
+
+        ascii += '\n';
+      }
+
+      if (size % 2 && margin > 0) {
+        return ascii.substring(0, ascii.length - size - 1) + Array(size+1).join('▀');
+      }
+
+      return ascii.substring(0, ascii.length-1);
+    };
+
+    _this.createASCII = function(cellSize, margin) {
+      cellSize = cellSize || 1;
+
+      if (cellSize < 2) {
+        return _createHalfASCII(margin);
+      }
+
+      cellSize -= 1;
+      margin = (typeof margin == 'undefined')? cellSize * 2 : margin;
+
+      var size = _this.getModuleCount() * cellSize + margin * 2;
+      var min = margin;
+      var max = size - margin;
+
+      var y, x, r, p;
+
+      var white = Array(cellSize+1).join('██');
+      var black = Array(cellSize+1).join('  ');
+
+      var ascii = '';
+      var line = '';
+      for (y = 0; y < size; y += 1) {
+        r = Math.floor( (y - min) / cellSize);
+        line = '';
+        for (x = 0; x < size; x += 1) {
+          p = 1;
+
+          if (min <= x && x < max && min <= y && y < max && _this.isDark(r, Math.floor((x - min) / cellSize))) {
+            p = 0;
+          }
+
+          // Output 2 characters per pixel, to create full square. 1 character per pixels gives only half width of square.
+          line += p ? white : black;
+        }
+
+        for (r = 0; r < cellSize; r += 1) {
+          ascii += line + '\n';
+        }
+      }
+
+      return ascii.substring(0, ascii.length-1);
+    };
+
+    _this.renderTo2dContext = function(context, cellSize) {
+      cellSize = cellSize || 2;
+      var length = _this.getModuleCount();
+      for (var row = 0; row < length; row++) {
+        for (var col = 0; col < length; col++) {
+          context.fillStyle = _this.isDark(row, col) ? 'black' : 'white';
+          context.fillRect(col * cellSize, row * cellSize, cellSize, cellSize);
+        }
+      }
+    }
+
+    return _this;
+  };
+
+  //---------------------------------------------------------------------
+  // qrcode.stringToBytes
+  //---------------------------------------------------------------------
+
+  qrcode.stringToBytesFuncs = {
+    'default' : function(s) {
+      var bytes = [];
+      for (var i = 0; i < s.length; i += 1) {
+        var c = s.charCodeAt(i);
+        bytes.push(c & 0xff);
+      }
+      return bytes;
+    }
+  };
+
+  qrcode.stringToBytes = qrcode.stringToBytesFuncs['default'];
+
+  //---------------------------------------------------------------------
+  // qrcode.createStringToBytes
+  //---------------------------------------------------------------------
+
+  /**
+   * @param unicodeData base64 string of byte array.
+   * [16bit Unicode],[16bit Bytes], ...
+   * @param numChars
+   */
+  qrcode.createStringToBytes = function(unicodeData, numChars) {
+
+    // create conversion map.
+
+    var unicodeMap = function() {
+
+      var bin = base64DecodeInputStream(unicodeData);
+      var read = function() {
+        var b = bin.read();
+        if (b == -1) throw 'eof';
+        return b;
+      };
+
+      var count = 0;
+      var unicodeMap = {};
+      while (true) {
+        var b0 = bin.read();
+        if (b0 == -1) break;
+        var b1 = read();
+        var b2 = read();
+        var b3 = read();
+        var k = String.fromCharCode( (b0 << 8) | b1);
+        var v = (b2 << 8) | b3;
+        unicodeMap[k] = v;
+        count += 1;
+      }
+      if (count != numChars) {
+        throw count + ' != ' + numChars;
+      }
+
+      return unicodeMap;
+    }();
+
+    var unknownChar = '?'.charCodeAt(0);
+
+    return function(s) {
+      var bytes = [];
+      for (var i = 0; i < s.length; i += 1) {
+        var c = s.charCodeAt(i);
+        if (c < 128) {
+          bytes.push(c);
+        } else {
+          var b = unicodeMap[s.charAt(i)];
+          if (typeof b == 'number') {
+            if ( (b & 0xff) == b) {
+              // 1byte
+              bytes.push(b);
+            } else {
+              // 2bytes
+              bytes.push(b >>> 8);
+              bytes.push(b & 0xff);
+            }
+          } else {
+            bytes.push(unknownChar);
+          }
+        }
+      }
+      return bytes;
+    };
+  };
+
+  //---------------------------------------------------------------------
+  // QRMode
+  //---------------------------------------------------------------------
+
+  var QRMode = {
+    MODE_NUMBER :    1 << 0,
+    MODE_ALPHA_NUM : 1 << 1,
+    MODE_8BIT_BYTE : 1 << 2,
+    MODE_KANJI :     1 << 3
+  };
+
+  //---------------------------------------------------------------------
+  // QRErrorCorrectionLevel
+  //---------------------------------------------------------------------
+
+  var QRErrorCorrectionLevel = {
+    L : 1,
+    M : 0,
+    Q : 3,
+    H : 2
+  };
+
+  //---------------------------------------------------------------------
+  // QRMaskPattern
+  //---------------------------------------------------------------------
+
+  var QRMaskPattern = {
+    PATTERN000 : 0,
+    PATTERN001 : 1,
+    PATTERN010 : 2,
+    PATTERN011 : 3,
+    PATTERN100 : 4,
+    PATTERN101 : 5,
+    PATTERN110 : 6,
+    PATTERN111 : 7
+  };
+
+  //---------------------------------------------------------------------
+  // QRUtil
+  //---------------------------------------------------------------------
+
+  var QRUtil = function() {
+
+    var PATTERN_POSITION_TABLE = [
+      [],
+      [6, 18],
+      [6, 22],
+      [6, 26],
+      [6, 30],
+      [6, 34],
+      [6, 22, 38],
+      [6, 24, 42],
+      [6, 26, 46],
+      [6, 28, 50],
+      [6, 30, 54],
+      [6, 32, 58],
+      [6, 34, 62],
+      [6, 26, 46, 66],
+      [6, 26, 48, 70],
+      [6, 26, 50, 74],
+      [6, 30, 54, 78],
+      [6, 30, 56, 82],
+      [6, 30, 58, 86],
+      [6, 34, 62, 90],
+      [6, 28, 50, 72, 94],
+      [6, 26, 50, 74, 98],
+      [6, 30, 54, 78, 102],
+      [6, 28, 54, 80, 106],
+      [6, 32, 58, 84, 110],
+      [6, 30, 58, 86, 114],
+      [6, 34, 62, 90, 118],
+      [6, 26, 50, 74, 98, 122],
+      [6, 30, 54, 78, 102, 126],
+      [6, 26, 52, 78, 104, 130],
+      [6, 30, 56, 82, 108, 134],
+      [6, 34, 60, 86, 112, 138],
+      [6, 30, 58, 86, 114, 142],
+      [6, 34, 62, 90, 118, 146],
+      [6, 30, 54, 78, 102, 126, 150],
+      [6, 24, 50, 76, 102, 128, 154],
+      [6, 28, 54, 80, 106, 132, 158],
+      [6, 32, 58, 84, 110, 136, 162],
+      [6, 26, 54, 82, 110, 138, 166],
+      [6, 30, 58, 86, 114, 142, 170]
+    ];
+    var G15 = (1 << 10) | (1 << 8) | (1 << 5) | (1 << 4) | (1 << 2) | (1 << 1) | (1 << 0);
+    var G18 = (1 << 12) | (1 << 11) | (1 << 10) | (1 << 9) | (1 << 8) | (1 << 5) | (1 << 2) | (1 << 0);
+    var G15_MASK = (1 << 14) | (1 << 12) | (1 << 10) | (1 << 4) | (1 << 1);
+
+    var _this = {};
+
+    var getBCHDigit = function(data) {
+      var digit = 0;
+      while (data != 0) {
+        digit += 1;
+        data >>>= 1;
+      }
+      return digit;
+    };
+
+    _this.getBCHTypeInfo = function(data) {
+      var d = data << 10;
+      while (getBCHDigit(d) - getBCHDigit(G15) >= 0) {
+        d ^= (G15 << (getBCHDigit(d) - getBCHDigit(G15) ) );
+      }
+      return ( (data << 10) | d) ^ G15_MASK;
+    };
+
+    _this.getBCHTypeNumber = function(data) {
+      var d = data << 12;
+      while (getBCHDigit(d) - getBCHDigit(G18) >= 0) {
+        d ^= (G18 << (getBCHDigit(d) - getBCHDigit(G18) ) );
+      }
+      return (data << 12) | d;
+    };
+
+    _this.getPatternPosition = function(typeNumber) {
+      return PATTERN_POSITION_TABLE[typeNumber - 1];
+    };
+
+    _this.getMaskFunction = function(maskPattern) {
+
+      switch (maskPattern) {
+
+      case QRMaskPattern.PATTERN000 :
+        return function(i, j) { return (i + j) % 2 == 0; };
+      case QRMaskPattern.PATTERN001 :
+        return function(i, j) { return i % 2 == 0; };
+      case QRMaskPattern.PATTERN010 :
+        return function(i, j) { return j % 3 == 0; };
+      case QRMaskPattern.PATTERN011 :
+        return function(i, j) { return (i + j) % 3 == 0; };
+      case QRMaskPattern.PATTERN100 :
+        return function(i, j) { return (Math.floor(i / 2) + Math.floor(j / 3) ) % 2 == 0; };
+      case QRMaskPattern.PATTERN101 :
+        return function(i, j) { return (i * j) % 2 + (i * j) % 3 == 0; };
+      case QRMaskPattern.PATTERN110 :
+        return function(i, j) { return ( (i * j) % 2 + (i * j) % 3) % 2 == 0; };
+      case QRMaskPattern.PATTERN111 :
+        return function(i, j) { return ( (i * j) % 3 + (i + j) % 2) % 2 == 0; };
+
+      default :
+        throw 'bad maskPattern:' + maskPattern;
+      }
+    };
+
+    _this.getErrorCorrectPolynomial = function(errorCorrectLength) {
+      var a = qrPolynomial([1], 0);
+      for (var i = 0; i < errorCorrectLength; i += 1) {
+        a = a.multiply(qrPolynomial([1, QRMath.gexp(i)], 0) );
+      }
+      return a;
+    };
+
+    _this.getLengthInBits = function(mode, type) {
+
+      if (1 <= type && type < 10) {
+
+        // 1 - 9
+
+        switch(mode) {
+        case QRMode.MODE_NUMBER    : return 10;
+        case QRMode.MODE_ALPHA_NUM : return 9;
+        case QRMode.MODE_8BIT_BYTE : return 8;
+        case QRMode.MODE_KANJI     : return 8;
+        default :
+          throw 'mode:' + mode;
+        }
+
+      } else if (type < 27) {
+
+        // 10 - 26
+
+        switch(mode) {
+        case QRMode.MODE_NUMBER    : return 12;
+        case QRMode.MODE_ALPHA_NUM : return 11;
+        case QRMode.MODE_8BIT_BYTE : return 16;
+        case QRMode.MODE_KANJI     : return 10;
+        default :
+          throw 'mode:' + mode;
+        }
+
+      } else if (type < 41) {
+
+        // 27 - 40
+
+        switch(mode) {
+        case QRMode.MODE_NUMBER    : return 14;
+        case QRMode.MODE_ALPHA_NUM : return 13;
+        case QRMode.MODE_8BIT_BYTE : return 16;
+        case QRMode.MODE_KANJI     : return 12;
+        default :
+          throw 'mode:' + mode;
+        }
+
+      } else {
+        throw 'type:' + type;
+      }
+    };
+
+    _this.getLostPoint = function(qrcode) {
+
+      var moduleCount = qrcode.getModuleCount();
+
+      var lostPoint = 0;
+
+      // LEVEL1
+
+      for (var row = 0; row < moduleCount; row += 1) {
+        for (var col = 0; col < moduleCount; col += 1) {
+
+          var sameCount = 0;
+          var dark = qrcode.isDark(row, col);
+
+          for (var r = -1; r <= 1; r += 1) {
+
+            if (row + r < 0 || moduleCount <= row + r) {
+              continue;
+            }
+
+            for (var c = -1; c <= 1; c += 1) {
+
+              if (col + c < 0 || moduleCount <= col + c) {
+                continue;
+              }
+
+              if (r == 0 && c == 0) {
+                continue;
+              }
+
+              if (dark == qrcode.isDark(row + r, col + c) ) {
+                sameCount += 1;
+              }
+            }
+          }
+
+          if (sameCount > 5) {
+            lostPoint += (3 + sameCount - 5);
+          }
+        }
+      };
+
+      // LEVEL2
+
+      for (var row = 0; row < moduleCount - 1; row += 1) {
+        for (var col = 0; col < moduleCount - 1; col += 1) {
+          var count = 0;
+          if (qrcode.isDark(row, col) ) count += 1;
+          if (qrcode.isDark(row + 1, col) ) count += 1;
+          if (qrcode.isDark(row, col + 1) ) count += 1;
+          if (qrcode.isDark(row + 1, col + 1) ) count += 1;
+          if (count == 0 || count == 4) {
+            lostPoint += 3;
+          }
+        }
+      }
+
+      // LEVEL3
+
+      for (var row = 0; row < moduleCount; row += 1) {
+        for (var col = 0; col < moduleCount - 6; col += 1) {
+          if (qrcode.isDark(row, col)
+              && !qrcode.isDark(row, col + 1)
+              &&  qrcode.isDark(row, col + 2)
+              &&  qrcode.isDark(row, col + 3)
+              &&  qrcode.isDark(row, col + 4)
+              && !qrcode.isDark(row, col + 5)
+              &&  qrcode.isDark(row, col + 6) ) {
+            lostPoint += 40;
+          }
+        }
+      }
+
+      for (var col = 0; col < moduleCount; col += 1) {
+        for (var row = 0; row < moduleCount - 6; row += 1) {
+          if (qrcode.isDark(row, col)
+              && !qrcode.isDark(row + 1, col)
+              &&  qrcode.isDark(row + 2, col)
+              &&  qrcode.isDark(row + 3, col)
+              &&  qrcode.isDark(row + 4, col)
+              && !qrcode.isDark(row + 5, col)
+              &&  qrcode.isDark(row + 6, col) ) {
+            lostPoint += 40;
+          }
+        }
+      }
+
+      // LEVEL4
+
+      var darkCount = 0;
+
+      for (var col = 0; col < moduleCount; col += 1) {
+        for (var row = 0; row < moduleCount; row += 1) {
+          if (qrcode.isDark(row, col) ) {
+            darkCount += 1;
+          }
+        }
+      }
+
+      var ratio = Math.abs(100 * darkCount / moduleCount / moduleCount - 50) / 5;
+      lostPoint += ratio * 10;
+
+      return lostPoint;
+    };
+
+    return _this;
+  }();
+
+  //---------------------------------------------------------------------
+  // QRMath
+  //---------------------------------------------------------------------
+
+  var QRMath = function() {
+
+    var EXP_TABLE = new Array(256);
+    var LOG_TABLE = new Array(256);
+
+    // initialize tables
+    for (var i = 0; i < 8; i += 1) {
+      EXP_TABLE[i] = 1 << i;
+    }
+    for (var i = 8; i < 256; i += 1) {
+      EXP_TABLE[i] = EXP_TABLE[i - 4]
+        ^ EXP_TABLE[i - 5]
+        ^ EXP_TABLE[i - 6]
+        ^ EXP_TABLE[i - 8];
+    }
+    for (var i = 0; i < 255; i += 1) {
+      LOG_TABLE[EXP_TABLE[i] ] = i;
+    }
+
+    var _this = {};
+
+    _this.glog = function(n) {
+
+      if (n < 1) {
+        throw 'glog(' + n + ')';
+      }
+
+      return LOG_TABLE[n];
+    };
+
+    _this.gexp = function(n) {
+
+      while (n < 0) {
+        n += 255;
+      }
+
+      while (n >= 256) {
+        n -= 255;
+      }
+
+      return EXP_TABLE[n];
+    };
+
+    return _this;
+  }();
+
+  //---------------------------------------------------------------------
+  // qrPolynomial
+  //---------------------------------------------------------------------
+
+  function qrPolynomial(num, shift) {
+
+    if (typeof num.length == 'undefined') {
+      throw num.length + '/' + shift;
+    }
+
+    var _num = function() {
+      var offset = 0;
+      while (offset < num.length && num[offset] == 0) {
+        offset += 1;
+      }
+      var _num = new Array(num.length - offset + shift);
+      for (var i = 0; i < num.length - offset; i += 1) {
+        _num[i] = num[i + offset];
+      }
+      return _num;
+    }();
+
+    var _this = {};
+
+    _this.getAt = function(index) {
+      return _num[index];
+    };
+
+    _this.getLength = function() {
+      return _num.length;
+    };
+
+    _this.multiply = function(e) {
+
+      var num = new Array(_this.getLength() + e.getLength() - 1);
+
+      for (var i = 0; i < _this.getLength(); i += 1) {
+        for (var j = 0; j < e.getLength(); j += 1) {
+          num[i + j] ^= QRMath.gexp(QRMath.glog(_this.getAt(i) ) + QRMath.glog(e.getAt(j) ) );
+        }
+      }
+
+      return qrPolynomial(num, 0);
+    };
+
+    _this.mod = function(e) {
+
+      if (_this.getLength() - e.getLength() < 0) {
+        return _this;
+      }
+
+      var ratio = QRMath.glog(_this.getAt(0) ) - QRMath.glog(e.getAt(0) );
+
+      var num = new Array(_this.getLength() );
+      for (var i = 0; i < _this.getLength(); i += 1) {
+        num[i] = _this.getAt(i);
+      }
+
+      for (var i = 0; i < e.getLength(); i += 1) {
+        num[i] ^= QRMath.gexp(QRMath.glog(e.getAt(i) ) + ratio);
+      }
+
+      // recursive call
+      return qrPolynomial(num, 0).mod(e);
+    };
+
+    return _this;
+  };
+
+  //---------------------------------------------------------------------
+  // QRRSBlock
+  //---------------------------------------------------------------------
+
+  var QRRSBlock = function() {
+
+    var RS_BLOCK_TABLE = [
+
+      // L
+      // M
+      // Q
+      // H
+
+      // 1
+      [1, 26, 19],
+      [1, 26, 16],
+      [1, 26, 13],
+      [1, 26, 9],
+
+      // 2
+      [1, 44, 34],
+      [1, 44, 28],
+      [1, 44, 22],
+      [1, 44, 16],
+
+      // 3
+      [1, 70, 55],
+      [1, 70, 44],
+      [2, 35, 17],
+      [2, 35, 13],
+
+      // 4
+      [1, 100, 80],
+      [2, 50, 32],
+      [2, 50, 24],
+      [4, 25, 9],
+
+      // 5
+      [1, 134, 108],
+      [2, 67, 43],
+      [2, 33, 15, 2, 34, 16],
+      [2, 33, 11, 2, 34, 12],
+
+      // 6
+      [2, 86, 68],
+      [4, 43, 27],
+      [4, 43, 19],
+      [4, 43, 15],
+
+      // 7
+      [2, 98, 78],
+      [4, 49, 31],
+      [2, 32, 14, 4, 33, 15],
+      [4, 39, 13, 1, 40, 14],
+
+      // 8
+      [2, 121, 97],
+      [2, 60, 38, 2, 61, 39],
+      [4, 40, 18, 2, 41, 19],
+      [4, 40, 14, 2, 41, 15],
+
+      // 9
+      [2, 146, 116],
+      [3, 58, 36, 2, 59, 37],
+      [4, 36, 16, 4, 37, 17],
+      [4, 36, 12, 4, 37, 13],
+
+      // 10
+      [2, 86, 68, 2, 87, 69],
+      [4, 69, 43, 1, 70, 44],
+      [6, 43, 19, 2, 44, 20],
+      [6, 43, 15, 2, 44, 16],
+
+      // 11
+      [4, 101, 81],
+      [1, 80, 50, 4, 81, 51],
+      [4, 50, 22, 4, 51, 23],
+      [3, 36, 12, 8, 37, 13],
+
+      // 12
+      [2, 116, 92, 2, 117, 93],
+      [6, 58, 36, 2, 59, 37],
+      [4, 46, 20, 6, 47, 21],
+      [7, 42, 14, 4, 43, 15],
+
+      // 13
+      [4, 133, 107],
+      [8, 59, 37, 1, 60, 38],
+      [8, 44, 20, 4, 45, 21],
+      [12, 33, 11, 4, 34, 12],
+
+      // 14
+      [3, 145, 115, 1, 146, 116],
+      [4, 64, 40, 5, 65, 41],
+      [11, 36, 16, 5, 37, 17],
+      [11, 36, 12, 5, 37, 13],
+
+      // 15
+      [5, 109, 87, 1, 110, 88],
+      [5, 65, 41, 5, 66, 42],
+      [5, 54, 24, 7, 55, 25],
+      [11, 36, 12, 7, 37, 13],
+
+      // 16
+      [5, 122, 98, 1, 123, 99],
+      [7, 73, 45, 3, 74, 46],
+      [15, 43, 19, 2, 44, 20],
+      [3, 45, 15, 13, 46, 16],
+
+      // 17
+      [1, 135, 107, 5, 136, 108],
+      [10, 74, 46, 1, 75, 47],
+      [1, 50, 22, 15, 51, 23],
+      [2, 42, 14, 17, 43, 15],
+
+      // 18
+      [5, 150, 120, 1, 151, 121],
+      [9, 69, 43, 4, 70, 44],
+      [17, 50, 22, 1, 51, 23],
+      [2, 42, 14, 19, 43, 15],
+
+      // 19
+      [3, 141, 113, 4, 142, 114],
+      [3, 70, 44, 11, 71, 45],
+      [17, 47, 21, 4, 48, 22],
+      [9, 39, 13, 16, 40, 14],
+
+      // 20
+      [3, 135, 107, 5, 136, 108],
+      [3, 67, 41, 13, 68, 42],
+      [15, 54, 24, 5, 55, 25],
+      [15, 43, 15, 10, 44, 16],
+
+      // 21
+      [4, 144, 116, 4, 145, 117],
+      [17, 68, 42],
+      [17, 50, 22, 6, 51, 23],
+      [19, 46, 16, 6, 47, 17],
+
+      // 22
+      [2, 139, 111, 7, 140, 112],
+      [17, 74, 46],
+      [7, 54, 24, 16, 55, 25],
+      [34, 37, 13],
+
+      // 23
+      [4, 151, 121, 5, 152, 122],
+      [4, 75, 47, 14, 76, 48],
+      [11, 54, 24, 14, 55, 25],
+      [16, 45, 15, 14, 46, 16],
+
+      // 24
+      [6, 147, 117, 4, 148, 118],
+      [6, 73, 45, 14, 74, 46],
+      [11, 54, 24, 16, 55, 25],
+      [30, 46, 16, 2, 47, 17],
+
+      // 25
+      [8, 132, 106, 4, 133, 107],
+      [8, 75, 47, 13, 76, 48],
+      [7, 54, 24, 22, 55, 25],
+      [22, 45, 15, 13, 46, 16],
+
+      // 26
+      [10, 142, 114, 2, 143, 115],
+      [19, 74, 46, 4, 75, 47],
+      [28, 50, 22, 6, 51, 23],
+      [33, 46, 16, 4, 47, 17],
+
+      // 27
+      [8, 152, 122, 4, 153, 123],
+      [22, 73, 45, 3, 74, 46],
+      [8, 53, 23, 26, 54, 24],
+      [12, 45, 15, 28, 46, 16],
+
+      // 28
+      [3, 147, 117, 10, 148, 118],
+      [3, 73, 45, 23, 74, 46],
+      [4, 54, 24, 31, 55, 25],
+      [11, 45, 15, 31, 46, 16],
+
+      // 29
+      [7, 146, 116, 7, 147, 117],
+      [21, 73, 45, 7, 74, 46],
+      [1, 53, 23, 37, 54, 24],
+      [19, 45, 15, 26, 46, 16],
+
+      // 30
+      [5, 145, 115, 10, 146, 116],
+      [19, 75, 47, 10, 76, 48],
+      [15, 54, 24, 25, 55, 25],
+      [23, 45, 15, 25, 46, 16],
+
+      // 31
+      [13, 145, 115, 3, 146, 116],
+      [2, 74, 46, 29, 75, 47],
+      [42, 54, 24, 1, 55, 25],
+      [23, 45, 15, 28, 46, 16],
+
+      // 32
+      [17, 145, 115],
+      [10, 74, 46, 23, 75, 47],
+      [10, 54, 24, 35, 55, 25],
+      [19, 45, 15, 35, 46, 16],
+
+      // 33
+      [17, 145, 115, 1, 146, 116],
+      [14, 74, 46, 21, 75, 47],
+      [29, 54, 24, 19, 55, 25],
+      [11, 45, 15, 46, 46, 16],
+
+      // 34
+      [13, 145, 115, 6, 146, 116],
+      [14, 74, 46, 23, 75, 47],
+      [44, 54, 24, 7, 55, 25],
+      [59, 46, 16, 1, 47, 17],
+
+      // 35
+      [12, 151, 121, 7, 152, 122],
+      [12, 75, 47, 26, 76, 48],
+      [39, 54, 24, 14, 55, 25],
+      [22, 45, 15, 41, 46, 16],
+
+      // 36
+      [6, 151, 121, 14, 152, 122],
+      [6, 75, 47, 34, 76, 48],
+      [46, 54, 24, 10, 55, 25],
+      [2, 45, 15, 64, 46, 16],
+
+      // 37
+      [17, 152, 122, 4, 153, 123],
+      [29, 74, 46, 14, 75, 47],
+      [49, 54, 24, 10, 55, 25],
+      [24, 45, 15, 46, 46, 16],
+
+      // 38
+      [4, 152, 122, 18, 153, 123],
+      [13, 74, 46, 32, 75, 47],
+      [48, 54, 24, 14, 55, 25],
+      [42, 45, 15, 32, 46, 16],
+
+      // 39
+      [20, 147, 117, 4, 148, 118],
+      [40, 75, 47, 7, 76, 48],
+      [43, 54, 24, 22, 55, 25],
+      [10, 45, 15, 67, 46, 16],
+
+      // 40
+      [19, 148, 118, 6, 149, 119],
+      [18, 75, 47, 31, 76, 48],
+      [34, 54, 24, 34, 55, 25],
+      [20, 45, 15, 61, 46, 16]
+    ];
+
+    var qrRSBlock = function(totalCount, dataCount) {
+      var _this = {};
+      _this.totalCount = totalCount;
+      _this.dataCount = dataCount;
+      return _this;
+    };
+
+    var _this = {};
+
+    var getRsBlockTable = function(typeNumber, errorCorrectionLevel) {
+
+      switch(errorCorrectionLevel) {
+      case QRErrorCorrectionLevel.L :
+        return RS_BLOCK_TABLE[(typeNumber - 1) * 4 + 0];
+      case QRErrorCorrectionLevel.M :
+        return RS_BLOCK_TABLE[(typeNumber - 1) * 4 + 1];
+      case QRErrorCorrectionLevel.Q :
+        return RS_BLOCK_TABLE[(typeNumber - 1) * 4 + 2];
+      case QRErrorCorrectionLevel.H :
+        return RS_BLOCK_TABLE[(typeNumber - 1) * 4 + 3];
+      default :
+        return undefined;
+      }
+    };
+
+    _this.getRSBlocks = function(typeNumber, errorCorrectionLevel) {
+
+      var rsBlock = getRsBlockTable(typeNumber, errorCorrectionLevel);
+
+      if (typeof rsBlock == 'undefined') {
+        throw 'bad rs block @ typeNumber:' + typeNumber +
+            '/errorCorrectionLevel:' + errorCorrectionLevel;
+      }
+
+      var length = rsBlock.length / 3;
+
+      var list = [];
+
+      for (var i = 0; i < length; i += 1) {
+
+        var count = rsBlock[i * 3 + 0];
+        var totalCount = rsBlock[i * 3 + 1];
+        var dataCount = rsBlock[i * 3 + 2];
+
+        for (var j = 0; j < count; j += 1) {
+          list.push(qrRSBlock(totalCount, dataCount) );
+        }
+      }
+
+      return list;
+    };
+
+    return _this;
+  }();
+
+  //---------------------------------------------------------------------
+  // qrBitBuffer
+  //---------------------------------------------------------------------
+
+  var qrBitBuffer = function() {
+
+    var _buffer = [];
+    var _length = 0;
+
+    var _this = {};
+
+    _this.getBuffer = function() {
+      return _buffer;
+    };
+
+    _this.getAt = function(index) {
+      var bufIndex = Math.floor(index / 8);
+      return ( (_buffer[bufIndex] >>> (7 - index % 8) ) & 1) == 1;
+    };
+
+    _this.put = function(num, length) {
+      for (var i = 0; i < length; i += 1) {
+        _this.putBit( ( (num >>> (length - i - 1) ) & 1) == 1);
+      }
+    };
+
+    _this.getLengthInBits = function() {
+      return _length;
+    };
+
+    _this.putBit = function(bit) {
+
+      var bufIndex = Math.floor(_length / 8);
+      if (_buffer.length <= bufIndex) {
+        _buffer.push(0);
+      }
+
+      if (bit) {
+        _buffer[bufIndex] |= (0x80 >>> (_length % 8) );
+      }
+
+      _length += 1;
+    };
+
+    return _this;
+  };
+
+  //---------------------------------------------------------------------
+  // qrNumber
+  //---------------------------------------------------------------------
+
+  var qrNumber = function(data) {
+
+    var _mode = QRMode.MODE_NUMBER;
+    var _data = data;
+
+    var _this = {};
+
+    _this.getMode = function() {
+      return _mode;
+    };
+
+    _this.getLength = function(buffer) {
+      return _data.length;
+    };
+
+    _this.write = function(buffer) {
+
+      var data = _data;
+
+      var i = 0;
+
+      while (i + 2 < data.length) {
+        buffer.put(strToNum(data.substring(i, i + 3) ), 10);
+        i += 3;
+      }
+
+      if (i < data.length) {
+        if (data.length - i == 1) {
+          buffer.put(strToNum(data.substring(i, i + 1) ), 4);
+        } else if (data.length - i == 2) {
+          buffer.put(strToNum(data.substring(i, i + 2) ), 7);
+        }
+      }
+    };
+
+    var strToNum = function(s) {
+      var num = 0;
+      for (var i = 0; i < s.length; i += 1) {
+        num = num * 10 + chatToNum(s.charAt(i) );
+      }
+      return num;
+    };
+
+    var chatToNum = function(c) {
+      if ('0' <= c && c <= '9') {
+        return c.charCodeAt(0) - '0'.charCodeAt(0);
+      }
+      throw 'illegal char :' + c;
+    };
+
+    return _this;
+  };
+
+  //---------------------------------------------------------------------
+  // qrAlphaNum
+  //---------------------------------------------------------------------
+
+  var qrAlphaNum = function(data) {
+
+    var _mode = QRMode.MODE_ALPHA_NUM;
+    var _data = data;
+
+    var _this = {};
+
+    _this.getMode = function() {
+      return _mode;
+    };
+
+    _this.getLength = function(buffer) {
+      return _data.length;
+    };
+
+    _this.write = function(buffer) {
+
+      var s = _data;
+
+      var i = 0;
+
+      while (i + 1 < s.length) {
+        buffer.put(
+          getCode(s.charAt(i) ) * 45 +
+          getCode(s.charAt(i + 1) ), 11);
+        i += 2;
+      }
+
+      if (i < s.length) {
+        buffer.put(getCode(s.charAt(i) ), 6);
+      }
+    };
+
+    var getCode = function(c) {
+
+      if ('0' <= c && c <= '9') {
+        return c.charCodeAt(0) - '0'.charCodeAt(0);
+      } else if ('A' <= c && c <= 'Z') {
+        return c.charCodeAt(0) - 'A'.charCodeAt(0) + 10;
+      } else {
+        switch (c) {
+        case ' ' : return 36;
+        case '$' : return 37;
+        case '%' : return 38;
+        case '*' : return 39;
+        case '+' : return 40;
+        case '-' : return 41;
+        case '.' : return 42;
+        case '/' : return 43;
+        case ':' : return 44;
+        default :
+          throw 'illegal char :' + c;
+        }
+      }
+    };
+
+    return _this;
+  };
+
+  //---------------------------------------------------------------------
+  // qr8BitByte
+  //---------------------------------------------------------------------
+
+  var qr8BitByte = function(data) {
+
+    var _mode = QRMode.MODE_8BIT_BYTE;
+    var _data = data;
+    var _bytes = qrcode.stringToBytes(data);
+
+    var _this = {};
+
+    _this.getMode = function() {
+      return _mode;
+    };
+
+    _this.getLength = function(buffer) {
+      return _bytes.length;
+    };
+
+    _this.write = function(buffer) {
+      for (var i = 0; i < _bytes.length; i += 1) {
+        buffer.put(_bytes[i], 8);
+      }
+    };
+
+    return _this;
+  };
+
+  //---------------------------------------------------------------------
+  // qrKanji
+  //---------------------------------------------------------------------
+
+  var qrKanji = function(data) {
+
+    var _mode = QRMode.MODE_KANJI;
+    var _data = data;
+
+    var stringToBytes = qrcode.stringToBytesFuncs['SJIS'];
+    if (!stringToBytes) {
+      throw 'sjis not supported.';
+    }
+    !function(c, code) {
+      // self test for sjis support.
+      var test = stringToBytes(c);
+      if (test.length != 2 || ( (test[0] << 8) | test[1]) != code) {
+        throw 'sjis not supported.';
+      }
+    }('\u53cb', 0x9746);
+
+    var _bytes = stringToBytes(data);
+
+    var _this = {};
+
+    _this.getMode = function() {
+      return _mode;
+    };
+
+    _this.getLength = function(buffer) {
+      return ~~(_bytes.length / 2);
+    };
+
+    _this.write = function(buffer) {
+
+      var data = _bytes;
+
+      var i = 0;
+
+      while (i + 1 < data.length) {
+
+        var c = ( (0xff & data[i]) << 8) | (0xff & data[i + 1]);
+
+        if (0x8140 <= c && c <= 0x9FFC) {
+          c -= 0x8140;
+        } else if (0xE040 <= c && c <= 0xEBBF) {
+          c -= 0xC140;
+        } else {
+          throw 'illegal char at ' + (i + 1) + '/' + c;
+        }
+
+        c = ( (c >>> 8) & 0xff) * 0xC0 + (c & 0xff);
+
+        buffer.put(c, 13);
+
+        i += 2;
+      }
+
+      if (i < data.length) {
+        throw 'illegal char at ' + (i + 1);
+      }
+    };
+
+    return _this;
+  };
+
+  //=====================================================================
+  // GIF Support etc.
+  //
+
+  //---------------------------------------------------------------------
+  // byteArrayOutputStream
+  //---------------------------------------------------------------------
+
+  var byteArrayOutputStream = function() {
+
+    var _bytes = [];
+
+    var _this = {};
+
+    _this.writeByte = function(b) {
+      _bytes.push(b & 0xff);
+    };
+
+    _this.writeShort = function(i) {
+      _this.writeByte(i);
+      _this.writeByte(i >>> 8);
+    };
+
+    _this.writeBytes = function(b, off, len) {
+      off = off || 0;
+      len = len || b.length;
+      for (var i = 0; i < len; i += 1) {
+        _this.writeByte(b[i + off]);
+      }
+    };
+
+    _this.writeString = function(s) {
+      for (var i = 0; i < s.length; i += 1) {
+        _this.writeByte(s.charCodeAt(i) );
+      }
+    };
+
+    _this.toByteArray = function() {
+      return _bytes;
+    };
+
+    _this.toString = function() {
+      var s = '';
+      s += '[';
+      for (var i = 0; i < _bytes.length; i += 1) {
+        if (i > 0) {
+          s += ',';
+        }
+        s += _bytes[i];
+      }
+      s += ']';
+      return s;
+    };
+
+    return _this;
+  };
+
+  //---------------------------------------------------------------------
+  // base64EncodeOutputStream
+  //---------------------------------------------------------------------
+
+  var base64EncodeOutputStream = function() {
+
+    var _buffer = 0;
+    var _buflen = 0;
+    var _length = 0;
+    var _base64 = '';
+
+    var _this = {};
+
+    var writeEncoded = function(b) {
+      _base64 += String.fromCharCode(encode(b & 0x3f) );
+    };
+
+    var encode = function(n) {
+      if (n < 0) {
+        // error.
+      } else if (n < 26) {
+        return 0x41 + n;
+      } else if (n < 52) {
+        return 0x61 + (n - 26);
+      } else if (n < 62) {
+        return 0x30 + (n - 52);
+      } else if (n == 62) {
+        return 0x2b;
+      } else if (n == 63) {
+        return 0x2f;
+      }
+      throw 'n:' + n;
+    };
+
+    _this.writeByte = function(n) {
+
+      _buffer = (_buffer << 8) | (n & 0xff);
+      _buflen += 8;
+      _length += 1;
+
+      while (_buflen >= 6) {
+        writeEncoded(_buffer >>> (_buflen - 6) );
+        _buflen -= 6;
+      }
+    };
+
+    _this.flush = function() {
+
+      if (_buflen > 0) {
+        writeEncoded(_buffer << (6 - _buflen) );
+        _buffer = 0;
+        _buflen = 0;
+      }
+
+      if (_length % 3 != 0) {
+        // padding
+        var padlen = 3 - _length % 3;
+        for (var i = 0; i < padlen; i += 1) {
+          _base64 += '=';
+        }
+      }
+    };
+
+    _this.toString = function() {
+      return _base64;
+    };
+
+    return _this;
+  };
+
+  //---------------------------------------------------------------------
+  // base64DecodeInputStream
+  //---------------------------------------------------------------------
+
+  var base64DecodeInputStream = function(str) {
+
+    var _str = str;
+    var _pos = 0;
+    var _buffer = 0;
+    var _buflen = 0;
+
+    var _this = {};
+
+    _this.read = function() {
+
+      while (_buflen < 8) {
+
+        if (_pos >= _str.length) {
+          if (_buflen == 0) {
+            return -1;
+          }
+          throw 'unexpected end of file./' + _buflen;
+        }
+
+        var c = _str.charAt(_pos);
+        _pos += 1;
+
+        if (c == '=') {
+          _buflen = 0;
+          return -1;
+        } else if (c.match(/^\s$/) ) {
+          // ignore if whitespace.
+          continue;
+        }
+
+        _buffer = (_buffer << 6) | decode(c.charCodeAt(0) );
+        _buflen += 6;
+      }
+
+      var n = (_buffer >>> (_buflen - 8) ) & 0xff;
+      _buflen -= 8;
+      return n;
+    };
+
+    var decode = function(c) {
+      if (0x41 <= c && c <= 0x5a) {
+        return c - 0x41;
+      } else if (0x61 <= c && c <= 0x7a) {
+        return c - 0x61 + 26;
+      } else if (0x30 <= c && c <= 0x39) {
+        return c - 0x30 + 52;
+      } else if (c == 0x2b) {
+        return 62;
+      } else if (c == 0x2f) {
+        return 63;
+      } else {
+        throw 'c:' + c;
+      }
+    };
+
+    return _this;
+  };
+
+  //---------------------------------------------------------------------
+  // gifImage (B/W)
+  //---------------------------------------------------------------------
+
+  var gifImage = function(width, height) {
+
+    var _width = width;
+    var _height = height;
+    var _data = new Array(width * height);
+
+    var _this = {};
+
+    _this.setPixel = function(x, y, pixel) {
+      _data[y * _width + x] = pixel;
+    };
+
+    _this.write = function(out) {
+
+      //---------------------------------
+      // GIF Signature
+
+      out.writeString('GIF87a');
+
+      //---------------------------------
+      // Screen Descriptor
+
+      out.writeShort(_width);
+      out.writeShort(_height);
+
+      out.writeByte(0x80); // 2bit
+      out.writeByte(0);
+      out.writeByte(0);
+
+      //---------------------------------
+      // Global Color Map
+
+      // black
+      out.writeByte(0x00);
+      out.writeByte(0x00);
+      out.writeByte(0x00);
+
+      // white
+      out.writeByte(0xff);
+      out.writeByte(0xff);
+      out.writeByte(0xff);
+
+      //---------------------------------
+      // Image Descriptor
+
+      out.writeString(',');
+      out.writeShort(0);
+      out.writeShort(0);
+      out.writeShort(_width);
+      out.writeShort(_height);
+      out.writeByte(0);
+
+      //---------------------------------
+      // Local Color Map
+
+      //---------------------------------
+      // Raster Data
+
+      var lzwMinCodeSize = 2;
+      var raster = getLZWRaster(lzwMinCodeSize);
+
+      out.writeByte(lzwMinCodeSize);
+
+      var offset = 0;
+
+      while (raster.length - offset > 255) {
+        out.writeByte(255);
+        out.writeBytes(raster, offset, 255);
+        offset += 255;
+      }
+
+      out.writeByte(raster.length - offset);
+      out.writeBytes(raster, offset, raster.length - offset);
+      out.writeByte(0x00);
+
+      //---------------------------------
+      // GIF Terminator
+      out.writeString(';');
+    };
+
+    var bitOutputStream = function(out) {
+
+      var _out = out;
+      var _bitLength = 0;
+      var _bitBuffer = 0;
+
+      var _this = {};
+
+      _this.write = function(data, length) {
+
+        if ( (data >>> length) != 0) {
+          throw 'length over';
+        }
+
+        while (_bitLength + length >= 8) {
+          _out.writeByte(0xff & ( (data << _bitLength) | _bitBuffer) );
+          length -= (8 - _bitLength);
+          data >>>= (8 - _bitLength);
+          _bitBuffer = 0;
+          _bitLength = 0;
+        }
+
+        _bitBuffer = (data << _bitLength) | _bitBuffer;
+        _bitLength = _bitLength + length;
+      };
+
+      _this.flush = function() {
+        if (_bitLength > 0) {
+          _out.writeByte(_bitBuffer);
+        }
+      };
+
+      return _this;
+    };
+
+    var getLZWRaster = function(lzwMinCodeSize) {
+
+      var clearCode = 1 << lzwMinCodeSize;
+      var endCode = (1 << lzwMinCodeSize) + 1;
+      var bitLength = lzwMinCodeSize + 1;
+
+      // Setup LZWTable
+      var table = lzwTable();
+
+      for (var i = 0; i < clearCode; i += 1) {
+        table.add(String.fromCharCode(i) );
+      }
+      table.add(String.fromCharCode(clearCode) );
+      table.add(String.fromCharCode(endCode) );
+
+      var byteOut = byteArrayOutputStream();
+      var bitOut = bitOutputStream(byteOut);
+
+      // clear code
+      bitOut.write(clearCode, bitLength);
+
+      var dataIndex = 0;
+
+      var s = String.fromCharCode(_data[dataIndex]);
+      dataIndex += 1;
+
+      while (dataIndex < _data.length) {
+
+        var c = String.fromCharCode(_data[dataIndex]);
+        dataIndex += 1;
+
+        if (table.contains(s + c) ) {
+
+          s = s + c;
+
+        } else {
+
+          bitOut.write(table.indexOf(s), bitLength);
+
+          if (table.size() < 0xfff) {
+
+            if (table.size() == (1 << bitLength) ) {
+              bitLength += 1;
+            }
+
+            table.add(s + c);
+          }
+
+          s = c;
+        }
+      }
+
+      bitOut.write(table.indexOf(s), bitLength);
+
+      // end code
+      bitOut.write(endCode, bitLength);
+
+      bitOut.flush();
+
+      return byteOut.toByteArray();
+    };
+
+    var lzwTable = function() {
+
+      var _map = {};
+      var _size = 0;
+
+      var _this = {};
+
+      _this.add = function(key) {
+        if (_this.contains(key) ) {
+          throw 'dup key:' + key;
+        }
+        _map[key] = _size;
+        _size += 1;
+      };
+
+      _this.size = function() {
+        return _size;
+      };
+
+      _this.indexOf = function(key) {
+        return _map[key];
+      };
+
+      _this.contains = function(key) {
+        return typeof _map[key] != 'undefined';
+      };
+
+      return _this;
+    };
+
+    return _this;
+  };
+
+  var createDataURL = function(width, height, getPixel) {
+    var gif = gifImage(width, height);
+    for (var y = 0; y < height; y += 1) {
+      for (var x = 0; x < width; x += 1) {
+        gif.setPixel(x, y, getPixel(x, y) );
+      }
+    }
+
+    var b = byteArrayOutputStream();
+    gif.write(b);
+
+    var base64 = base64EncodeOutputStream();
+    var bytes = b.toByteArray();
+    for (var i = 0; i < bytes.length; i += 1) {
+      base64.writeByte(bytes[i]);
+    }
+    base64.flush();
+
+    return 'data:image/gif;base64,' + base64;
+  };
+
+  //---------------------------------------------------------------------
+  // returns qrcode function.
+
+  return qrcode;
+}();
+
+// multibyte support
+!function() {
+
+  qrcode.stringToBytesFuncs['UTF-8'] = function(s) {
+    // http://stackoverflow.com/questions/18729405/how-to-convert-utf8-string-to-byte-array
+    function toUTF8Array(str) {
+      var utf8 = [];
+      for (var i=0; i < str.length; i++) {
+        var charcode = str.charCodeAt(i);
+        if (charcode < 0x80) utf8.push(charcode);
+        else if (charcode < 0x800) {
+          utf8.push(0xc0 | (charcode >> 6),
+              0x80 | (charcode & 0x3f));
+        }
+        else if (charcode < 0xd800 || charcode >= 0xe000) {
+          utf8.push(0xe0 | (charcode >> 12),
+              0x80 | ((charcode>>6) & 0x3f),
+              0x80 | (charcode & 0x3f));
+        }
+        // surrogate pair
+        else {
+          i++;
+          // UTF-16 encodes 0x10000-0x10FFFF by
+          // subtracting 0x10000 and splitting the
+          // 20 bits of 0x0-0xFFFFF into two halves
+          charcode = 0x10000 + (((charcode & 0x3ff)<<10)
+            | (str.charCodeAt(i) & 0x3ff));
+          utf8.push(0xf0 | (charcode >>18),
+              0x80 | ((charcode>>12) & 0x3f),
+              0x80 | ((charcode>>6) & 0x3f),
+              0x80 | (charcode & 0x3f));
+        }
+      }
+      return utf8;
+    }
+    return toUTF8Array(s);
+  };
+
+}();
+
+(function (factory) {
+  if (typeof define === 'function' && define.amd) {
+      define([], factory);
+  } else if (typeof exports === 'object') {
+      module.exports = factory();
+  }
+}(function () {
+    return qrcode;
+}));
+
+</script>
+<script>
+'use strict';
+/* =====================================================================
+   Titi-Sti — recettes & bar, appli locale (PWA). Données 100 % dans le téléphone.
+   ===================================================================== */
+
+const APP_ID = 'recettes-bar';
+const RECIPE_CATS = {
+  entree:  { label: 'Entrée',   color: '#6a9f3c' },
+  plat:    { label: 'Plat',     color: '#c4572e' },
+  dessert: { label: 'Dessert',  color: '#d2557f' },
+  boisson: { label: 'Boisson',  color: '#2f7fb5' },
+  autre:   { label: 'Autre',    color: '#7d8590' },
+};
+const BAR_CATS = {
+  gin:     { label: 'Gin',     color: '#2f8f6b', extra: [['botanicals', 'Botaniques'], ['tonic', 'Tonic conseillé'], ['garnish', 'Garniture']] },
+  rhum:    { label: 'Rhum',    color: '#c7801f', extra: [['age', 'Âge'], ['origin', 'Origine (canne / mélasse)'], ['spiced', 'Épicé ?']] },
+  whisky:  { label: 'Whisky',  color: '#7a4a24', extra: [['age', 'Âge'], ['peated', 'Tourbé ?'], ['cask', 'Type de fût']] },
+  sirop:   { label: 'Sirop',   color: '#d2557f', extra: [['flavor', 'Parfum'], ['usage', 'Usage']] },
+  liqueur: { label: 'Liqueur', color: '#7b52b8', extra: [['flavor', 'Parfum'], ['usage', 'Usage']] },
+  autre:   { label: 'Autre',   color: '#7d8590', extra: [] },
+};
+const DIFFS = ['Facile', 'Moyen', 'Difficile'];
+const QR_MAX = 1800; // caractères max d'un lien encodé en QR (lisible écran à écran)
+
+/* ---------- petites aides ---------- */
+const $ = (s, el = document) => el.querySelector(s);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const uid = () => (crypto.randomUUID ? crypto.randomUUID() : 'id-' + Date.now().toString(36) + Math.random().toString(36).slice(2));
+const norm = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+const today = () => new Date().toISOString().slice(0, 10);
+const clone = (o) => JSON.parse(JSON.stringify(o));
+
+const ICONS = {
+  book: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M4 19.5V21h16"/></svg>',
+  glass: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h14l-7 9z"/><path d="M12 12v8"/><path d="M8 21h8"/></svg>',
+  gear: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>',
+  plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
+  back: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>',
+  edit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>',
+  share: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>',
+  star: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z"/></svg>',
+  starO: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z"/></svg>',
+  link: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg>',
+  text: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>',
+  camera: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>',
+  pen: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21v-4L16 4l4 4L7 21z"/></svg>',
+  file: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>',
+  chef: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 13.9A4 4 0 0 1 7.3 6a5 5 0 0 1 9.4 0A4 4 0 0 1 18 13.9V21H6z"/><path d="M6 17h12"/></svg>',
+  trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>',
+};
+
+/* =====================================================================
+   Stockage : IndexedDB (repli mémoire si indisponible)
+   ===================================================================== */
+const Store = {
+  db: null, mem: new Map(),
+  async open() {
+    try {
+      this.db = await new Promise((res, rej) => {
+        const r = indexedDB.open(APP_ID, 1);
+        r.onupgradeneeded = () => r.result.createObjectStore('items', { keyPath: 'id' });
+        r.onsuccess = () => res(r.result);
+        r.onerror = () => rej(r.error);
+      });
+    } catch (e) { console.warn('IndexedDB indisponible, stockage en mémoire', e); this.db = null; }
+  },
+  async all() {
+    if (!this.db) return [...this.mem.values()];
+    return new Promise((res, rej) => {
+      const r = this.db.transaction('items').objectStore('items').getAll();
+      r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+    });
+  },
+  async put(item) {
+    item.updatedAt = Date.now();
+    if (!this.db) { this.mem.set(item.id, item); return; }
+    return new Promise((res, rej) => {
+      const t = this.db.transaction('items', 'readwrite'); t.objectStore('items').put(item);
+      t.oncomplete = () => res(); t.onerror = () => rej(t.error);
+    });
+  },
+  async del(id) {
+    if (!this.db) { this.mem.delete(id); return; }
+    return new Promise((res, rej) => {
+      const t = this.db.transaction('items', 'readwrite'); t.objectStore('items').delete(id);
+      t.oncomplete = () => res(); t.onerror = () => rej(t.error);
+    });
+  },
+};
+const Prefs = {
+  defaults: { name: '', apiKey: '', model: 'claude-haiku-5-5', fs: 'n', theme: 'auto', lastBackup: 0, seeded: false },
+  data: null,
+  load() { try { this.data = { ...this.defaults, ...JSON.parse(localStorage.getItem(APP_ID + '-prefs') || '{}') }; } catch { this.data = { ...this.defaults }; } },
+  get(k) { return this.data[k]; },
+  set(k, v) { this.data[k] = v; try { localStorage.setItem(APP_ID + '-prefs', JSON.stringify(this.data)); } catch { } },
+};
+
+/* =====================================================================
+   État
+   ===================================================================== */
+const S = { items: [], tab: 'recipes', q: '', rcat: 'all', bcat: 'all', favOnly: false };
+const recipes = () => S.items.filter(i => i.kind === 'recipe');
+const bottles = () => S.items.filter(i => i.kind === 'bottle');
+const byId = (id) => S.items.find(i => i.id === id);
+async function save(item) { await Store.put(item); const i = S.items.findIndex(x => x.id === item.id); if (i >= 0) S.items[i] = item; else S.items.push(item); }
+async function remove(id) { await Store.del(id); S.items = S.items.filter(x => x.id !== id); }
+const eff = (r) => r.current || r.base; // recette affichée : modifiée sinon originale
+
+function rarity(rating) {
+  if (rating == null) return null;
+  if (rating < 5) return { k: 'commune', label: 'Commune', color: '#9aa0a6' };
+  if (rating < 7) return { k: 'peu', label: 'Peu commune', color: '#4caf50' };
+  if (rating < 8.5) return { k: 'rare', label: 'Rare', color: '#2f7fd8' };
+  if (rating < 9.5) return { k: 'epique', label: 'Épique', color: '#8e44d1' };
+  return { k: 'legendaire', label: 'Légendaire', color: '#d4a017' };
+}
+const fmtNote = (n) => n == null ? '–' : String(n).replace('.', ',');
+function householdAvg(b) {
+  const notes = [b.mine?.rating, ...(b.others || []).map(o => o.rating)].filter(n => n != null);
+  if (!notes.length) return null;
+  return Math.round(notes.reduce((a, c) => a + c, 0) / notes.length * 10) / 10;
+}
+
+/* =====================================================================
+   Ingrédients : texte <-> structure, mise à l'échelle
+   ===================================================================== */
+const UNITS = ['cuillères à soupe', 'cuillère à soupe', 'cuillères à café', 'cuillère à café', 'c. à soupe', 'c. à café', 'c. à s.', 'c. à c.', 'càs', 'càc', 'cs', 'cc', 'kg', 'mg', 'g', 'dl', 'cl', 'ml', 'l', 'pincées', 'pincée', 'sachets', 'sachet', 'tranches', 'tranche', 'gousses', 'gousse', 'pots', 'pot', 'verres', 'verre', 'bottes', 'botte', 'brins', 'brin', 'feuilles', 'feuille', 'boîtes', 'boîte', 'tasses', 'tasse'];
+const FRAC = { '½': .5, '¼': .25, '¾': .75, '⅓': 1 / 3, '⅔': 2 / 3 };
+function parseIng(line) {
+  line = line.trim().replace(/^[-•*]\s*/, '');
+  if (!line) return null;
+  const m = line.match(/^(\d+(?:[.,]\d+)?(?:\s*\/\s*\d+)?|\d*\s*[½¼¾⅓⅔])\s*(.*)$/);
+  if (!m) return { qty: null, unit: '', name: line };
+  let q = m[1].replace(',', '.').trim(), qty;
+  if (/[½¼¾⅓⅔]/.test(q)) { const n = parseFloat(q) || 0; qty = n + FRAC[q.slice(-1)]; }
+  else if (q.includes('/')) { const [a, b] = q.split('/').map(Number); qty = a / b; }
+  else qty = parseFloat(q);
+  let rest = m[2], unit = '';
+  for (const u of UNITS) {
+    const re = new RegExp('^' + u.replace(/[.]/g, '\\.') + '(?=\\s|$)', 'i');
+    if (re.test(rest)) { unit = u; rest = rest.slice(u.length).trim(); break; }
+  }
+  rest = rest.replace(/^(de |d')/i, '');
+  return { qty, unit, name: rest };
+}
+function fmtQty(v) {
+  if (v == null || isNaN(v)) return '';
+  const fr = [[.25, '¼'], [1 / 3, '⅓'], [.5, '½'], [2 / 3, '⅔'], [.75, '¾']];
+  if (v < 10) {
+    const w = Math.floor(v), f = v - w;
+    for (const [x, s] of fr) if (Math.abs(f - x) < .04) return (w ? w + ' ' : '') + s;
+    return String(Math.round(v * 10) / 10).replace('.', ',');
+  }
+  return String(Math.round(v));
+}
+const ingLine = (i, k = 1) => [fmtQty(i.qty == null ? null : i.qty * k), i.unit, i.name].filter(Boolean).join(' ');
+
+/* =====================================================================
+   Photos : compression ~200 Ko
+   ===================================================================== */
+function fileToDataURL(file) { return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(file); }); }
+async function compressImage(src, maxSide = 1200, target = 220_000) {
+  const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; });
+  let w = img.naturalWidth, h = img.naturalHeight; const k = Math.min(1, maxSide / Math.max(w, h)); w = Math.round(w * k); h = Math.round(h * k);
+  const c = document.createElement('canvas'); c.width = w; c.height = h; c.getContext('2d').drawImage(img, 0, 0, w, h);
+  let q = .8, out = c.toDataURL('image/jpeg', q);
+  while (out.length * .75 > target && q > .4) { q -= .1; out = c.toDataURL('image/jpeg', q); }
+  return out;
+}
+function pickImage(capture) {
+  return new Promise((res) => {
+    const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*'; if (capture) inp.capture = 'environment';
+    inp.onchange = async () => { const f = inp.files[0]; if (!f) return res(null); try { res(await compressImage(await fileToDataURL(f))); } catch { toast('Image illisible'); res(null); } };
+    inp.click();
+  });
+}
+
+/* =====================================================================
+   Claude : import intelligent
+   ===================================================================== */
+const RECIPE_SCHEMA = `{
+  "title": "string",
+  "category": "entree | plat | dessert | boisson | autre",
+  "servings": number | null,
+  "prepMin": number | null,
+  "cookMin": number | null,
+  "difficulty": "Facile | Moyen | Difficile",
+  "ingredients": [{"qty": number | null, "unit": "string (g, kg, ml, cl, l, c. à s., c. à c., pincée… ou vide)", "name": "string"}],
+  "steps": ["string"],
+  "tags": ["string"],
+  "notes": "string"
+}`;
+const BOTTLE_SCHEMA = `{
+  "name": "string",
+  "category": "gin | rhum | whisky | sirop | liqueur | autre",
+  "brand": "string (distillerie ou marque)",
+  "country": "string",
+  "abv": number | null,
+  "description": "string (2-3 phrases de notes de dégustation, en français)",
+  "extra": {"botanicals": "", "tonic": "", "garnish": "", "age": "", "origin": "", "spiced": "", "peated": "", "cask": "", "flavor": "", "usage": ""}
+}`;
+const SYS_RECIPE = `Tu extrais des recettes de cuisine. Réponds UNIQUEMENT avec un objet JSON valide, sans texte autour, selon ce schéma :
+${RECIPE_SCHEMA}
+Règles : tout en français (traduis si besoin). Système métrique (convertis cups, oz, °F). Une étape = une action claire. Quantités numériques (0.5, pas "1/2"). N'invente rien : laisse null ou vide ce qui manque. Si le contenu n'est pas une recette, renvoie {"error": "explication courte"}.`;
+const SYS_BOTTLE = `Tu identifies des boissons (gin, rhum, whisky, sirop, liqueur…) à partir d'une photo d'étiquette ou d'un texte. Réponds UNIQUEMENT avec un objet JSON valide, sans texte autour, selon ce schéma :
+${BOTTLE_SCHEMA}
+Dans "extra", ne remplis que les champs pertinents pour la catégorie. Ce que tu lis sur l'étiquette prime ; complète avec tes connaissances seulement si tu es sûr. Si ce n'est pas une boisson, renvoie {"error": "explication courte"}.`;
+
+async function askClaude({ system, content, useFetch = false }) {
+  const key = Prefs.get('apiKey');
+  if (!key) throw new Error('NOKEY');
+  const headers = {
+    'content-type': 'application/json',
+    'x-api-key': key,
+    'anthropic-version': '2023-06-01',
+    'anthropic-dangerous-direct-browser-access': 'true',
+  };
+  if (useFetch) headers['anthropic-beta'] = 'web-fetch-2025-09-10';
+  const messages = [{ role: 'user', content }];
+  const body = { model: Prefs.get('model') || 'claude-haiku-5-5', max_tokens: 4000, system, messages };
+  if (useFetch) body.tools = [{ type: 'web_fetch_20250910', name: 'web_fetch', max_uses: 3, max_content_tokens: 40000 }];
+  let data;
+  for (let turn = 0; turn < 4; turn++) {
+    const r = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', headers, body: JSON.stringify(body) });
+    data = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(data?.error?.message || ('Erreur ' + r.status));
+    if (data.stop_reason === 'pause_turn') { messages.push({ role: 'assistant', content: data.content }); continue; }
+    break;
+  }
+  const fetchErr = (data.content || []).find(b => b.type === 'web_fetch_tool_result' && b.content?.type === 'web_fetch_tool_error');
+  const text = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n');
+  const a = text.indexOf('{'), z = text.lastIndexOf('}');
+  if (a < 0 || z < a) throw new Error(fetchErr ? 'Page inaccessible (' + fetchErr.content.error_code + '). Essayez « Coller le texte ».' : 'Réponse illisible, réessayez.');
+  const json = JSON.parse(text.slice(a, z + 1));
+  if (json.error) throw new Error(json.error);
+  return json;
+}
+const imgBlock = (dataUrl) => ({ type: 'image', source: { type: 'base64', media_type: dataUrl.slice(5, dataUrl.indexOf(';')), data: dataUrl.split(',')[1] } });
+
+function cleanRecipe(j) {
+  return {
+    title: j.title || 'Recette sans titre',
+    category: RECIPE_CATS[j.category] ? j.category : 'autre',
+    servings: j.servings || null, prepMin: j.prepMin || null, cookMin: j.cookMin || null,
+    difficulty: DIFFS.includes(j.difficulty) ? j.difficulty : 'Facile',
+    ingredients: (j.ingredients || []).filter(i => i && i.name).map(i => ({ qty: typeof i.qty === 'number' ? i.qty : null, unit: i.unit || '', name: i.name })),
+    steps: (j.steps || []).filter(Boolean), tags: j.tags || [], notes: j.notes || '',
+  };
+}
+function cleanBottle(j) {
+  const cat = BAR_CATS[j.category] ? j.category : 'autre';
+  const extra = {}; for (const [k] of BAR_CATS[cat].extra) extra[k] = j.extra?.[k] || '';
+  return { name: j.name || '', category: cat, brand: j.brand || '', country: j.country || '', abv: j.abv ?? null, description: j.description || '', price: null, extra };
+}
+
+/* =====================================================================
+   Échange : carte -> lien compressé / QR / fichier
+   ===================================================================== */
+const b64u = {
+  enc(bytes) { let s = ''; bytes.forEach(b => s += String.fromCharCode(b)); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); },
+  dec(str) { str = str.replace(/-/g, '+').replace(/_/g, '/'); while (str.length % 4) str += '='; return Uint8Array.from(atob(str), c => c.charCodeAt(0)); },
+};
+async function pipe(bytes, stream) { return new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(stream)).arrayBuffer()); }
+async function packPayload(obj) {
+  const raw = new TextEncoder().encode(JSON.stringify(obj));
+  if (typeof CompressionStream !== 'undefined') return 'z' + b64u.enc(await pipe(raw, new CompressionStream('deflate-raw')));
+  return 'j' + b64u.enc(raw);
+}
+async function unpackPayload(s) {
+  const bytes = b64u.dec(s.slice(1));
+  const raw = s[0] === 'z' ? await pipe(bytes, new DecompressionStream('deflate-raw')) : bytes;
+  return JSON.parse(new TextDecoder().decode(raw));
+}
+const appBase = () => location.href.split('#')[0].split('?')[0];
+
+function cardPayload(item, withAvis) {
+  const by = Prefs.get('name') || 'Quelqu’un';
+  if (item.kind === 'recipe') {
+    const p = { v: 1, k: 'r', id: item.id, by, d: eff(item), src: item.sourceUrl || '' };
+    if (item.current) p.mod = 1;
+    if (withAvis && item.mine?.rating != null) p.av = { r: item.mine.rating, c: item.mine.comment || '' };
+    return p;
+  }
+  const p = { v: 1, k: 'b', id: item.id, by, d: item.base };
+  if (withAvis && item.mine?.rating != null) p.av = { r: item.mine.rating, c: item.mine.comment || '' };
+  return p;
+}
+
+async function handleIncoming(p, photo) {
+  if (!p || !p.v || !p.d) { toast('Carte invalide'); return; }
+  if (p.k === 'r') return incomingRecipe(p, photo);
+  if (p.k === 'b') return incomingBottle(p, photo);
+}
+async function incomingRecipe(p, photo) {
+  const d = cleanRecipe(p.d);
+  const same = byId(p.id) || (p.src && recipes().find(r => r.sourceUrl && r.sourceUrl === p.src));
+  const make = (id) => ({
+    id, kind: 'recipe', createdAt: Date.now(), base: d, current: null, photo: photo || null, sourceUrl: p.src || '',
+    favorite: false, origin: { author: p.by, fromId: p.id, title: d.title }, mine: { rating: null, comment: '', tastedAt: '' }, others: [],
+  });
+  const choice = await previewSheet({
+    title: 'Recette reçue de ' + p.by,
+    body: `<div class="draft-note"><b>${esc(d.title)}</b><br>${d.ingredients.length} ingrédients · ${d.steps.length} étapes${p.mod ? ' · version modifiée par ' + esc(p.by) : ''}${p.av ? `<br>Avis de ${esc(p.by)} : <b>${fmtNote(p.av.r)}/10</b>${p.av.c ? ' — « ' + esc(p.av.c) + ' »' : ''}` : ''}</div>`
+      + (same ? `<p class="warn">Vous avez déjà « ${esc(eff(same).title)} ».</p>` : ''),
+    actions: same ? [['replace', 'Remplacer la mienne'], ['both', 'Garder les deux'], ['ignore', 'Ignorer', 'sec']] : [['add', 'Ajouter à mes recettes'], ['ignore', 'Annuler', 'sec']],
+  });
+  if (choice === 'ignore' || !choice) return;
+  let item;
+  if (choice === 'replace') { item = { ...same, base: d, current: null, origin: { author: p.by, fromId: p.id, title: d.title } }; if (photo) item.photo = photo; }
+  else item = make(choice === 'both' || byId(p.id) ? uid() : p.id);
+  if (p.av) { item.others = (item.others || []).filter(o => o.author !== p.by); item.others.push({ author: p.by, rating: p.av.r, comment: p.av.c, at: today() }); }
+  await save(item); toast('Recette ajoutée'); render(); openRecipe(item.id);
+}
+async function incomingBottle(p, photo) {
+  const d = cleanBottle({ ...p.d, extra: p.d.extra });
+  d.price = p.d.price ?? null;
+  const same = byId(p.id) || bottles().find(b => norm(b.base.name) === norm(d.name) && norm(b.base.brand) === norm(d.brand));
+  const avisTxt = p.av ? `<br>Avis de ${esc(p.by)} : <b>${fmtNote(p.av.r)}/10</b>${p.av.c ? ' — « ' + esc(p.av.c) + ' »' : ''}` : '';
+  const choice = await previewSheet({
+    title: 'Bouteille reçue de ' + p.by,
+    body: `<div class="draft-note"><b>${esc(d.name)}</b> · ${esc(BAR_CATS[d.category].label)}${d.brand ? ' · ' + esc(d.brand) : ''}${avisTxt}</div>`
+      + (same ? `<p class="warn">Vous avez déjà cette bouteille.${p.av ? ' L’avis de ' + esc(p.by) + ' sera ajouté à votre carte.' : ''}</p>` : ''),
+    actions: same ? [['merge', p.av ? 'Ajouter son avis' : 'OK'], ['ignore', 'Ignorer', 'sec']] : [['add', 'Ajouter à mon bar'], ['ignore', 'Annuler', 'sec']],
+  });
+  if (choice === 'ignore' || !choice) return;
+  let item;
+  if (same) {
+    item = same;
+  } else {
+    item = { id: p.id && !byId(p.id) ? p.id : uid(), kind: 'bottle', createdAt: Date.now(), base: d, photo: photo || null, mine: { rating: null, comment: '', tastedAt: '' }, others: [], origin: { author: p.by } };
+  }
+  if (p.av) {
+    item.others = (item.others || []).filter(o => o.author !== p.by);
+    item.others.push({ author: p.by, rating: p.av.r, comment: p.av.c, at: today() });
+  }
+  if (photo && !item.photo) item.photo = photo;
+  await save(item); toast(same ? 'Avis ajouté' : 'Bouteille ajoutée'); render(); openBottle(item.id);
+}
+
+/* =====================================================================
+   Navigation : écrans empilés + bouton retour Android
+   ===================================================================== */
+// Une seule entrée d'historique « sentinelle » : le bouton retour d'Android ferme l'écran du dessus.
+// Quand aucun écran n'est ouvert, l'entrée reste en place (un retour de plus pour quitter l'appli).
+const stack = [];
+let armed = false, ignorePop = 0;
+function arm() { if (!armed) { try { history.pushState({ rb: 1 }, ''); armed = true; } catch { } } }
+function disarm() { /* on garde l'entrée sentinelle : pas de history.back() programmatique (fiable sur Android) */ }
+function pushScreen(el, onClose) { document.body.appendChild(el); stack.push({ el, onClose }); arm(); }
+function replaceTop(el, onClose) {
+  const top = stack.at(-1); if (!top) return pushScreen(el, onClose);
+  top.onClose && top.onClose(); top.el.replaceWith(el); top.el = el; top.onClose = onClose;
+}
+function closeTop(fromPop) {
+  const s = stack.pop(); if (!s) return;
+  s.el.remove(); s.onClose && s.onClose();
+  if (fromPop) { armed = false; if (stack.length) arm(); }
+  else if (!stack.length) disarm();
+}
+window.addEventListener('popstate', () => { if (ignorePop > 0) { ignorePop--; return; } if (stack.length) closeTop(true); else armed = false; });
+function closeAll() { while (stack.length) { const s = stack.pop(); s.el.remove(); s.onClose && s.onClose(); } disarm(); }
+
+function screen(title, inner, actions = '') {
+  const el = document.createElement('div'); el.className = 'screen';
+  el.innerHTML = `<div class="screen-bar"><button class="icon-btn" data-back aria-label="Retour">${ICONS.back}</button><h2>${esc(title)}</h2>${actions}</div>${inner}`;
+  el.querySelector('[data-back]').onclick = () => closeTop();
+  return el;
+}
+function sheet(inner, onClose) {
+  const el = document.createElement('div'); el.className = 'backdrop';
+  el.innerHTML = `<div class="sheet"><div class="grab"></div>${inner}</div>`;
+  el.addEventListener('click', e => { if (e.target === el) closeTop(); });
+  pushScreen(el, onClose); return el;
+}
+function previewSheet({ title, body, actions }) {
+  return new Promise(res => {
+    let done = false;
+    const el = sheet(`<h2>${esc(title)}</h2>${body}<div style="display:flex;flex-direction:column;gap:10px;margin-top:14px">${actions.map(([k, l, c]) => `<button class="big-btn ${c || ''}" data-a="${k}">${esc(l)}</button>`).join('')}</div>`, () => { if (!done) res(null); });
+    el.querySelectorAll('[data-a]').forEach(b => b.onclick = () => { done = true; res(b.dataset.a); closeTop(); });
+  });
+}
+function confirmSheet(msg, okLabel = 'Confirmer', danger = true) {
+  return previewSheet({ title: msg, body: '', actions: [['ok', okLabel, danger ? 'danger' : ''], ['no', 'Annuler', 'sec']] }).then(a => a === 'ok');
+}
+let toastT;
+function toast(msg) {
+  document.querySelectorAll('.toast').forEach(t => t.remove());
+  const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; document.body.appendChild(t);
+  clearTimeout(toastT); toastT = setTimeout(() => t.remove(), 2600);
+}
+
+/* =====================================================================
+   Rendu principal (onglets)
+   ===================================================================== */
+function render() {
+  document.querySelectorAll('.tabbar button').forEach(b => b.classList.toggle('on', b.dataset.tab === S.tab));
+  $('#fab').classList.toggle('hidden', S.tab === 'settings');
+  const main = $('#main');
+  if (S.tab === 'recipes') main.innerHTML = renderRecipes();
+  else if (S.tab === 'bar') main.innerHTML = renderBar();
+  else main.innerHTML = renderSettings();
+  bindMain();
+}
+
+function recipeCard(r) {
+  const d = eff(r), c = RECIPE_CATS[d.category] || RECIPE_CATS.autre;
+  const t = (d.prepMin || 0) + (d.cookMin || 0);
+  const rr = rarity(r.mine?.rating);
+  return `<button class="card ${rr ? 'r-' + rr.k : ''}" style="--cat:${c.color}" data-open-r="${r.id}">
+    <span class="card-tag">${esc(c.label)}</span>${r.mine?.rating != null ? `<span class="card-score">${fmtNote(r.mine.rating)}</span>` : ''}
+    <div class="card-inner"><div class="card-photo">${r.photo ? `<img src="${r.photo}" alt="" loading="lazy">` : esc(d.title[0] || '?')}</div>
+    <div class="card-body"><div class="card-title">${r.favorite ? '<span style="color:#e0a800">★</span> ' : ''}${esc(d.title)}</div>
+    <div class="card-meta">${t ? `<span>⏱ ${t} min</span>` : ''}<span>${esc(d.difficulty)}</span>${r.current ? '<span class="badge-mod">Modifiée</span>' : ''}</div>
+    ${rr ? `<div class="rarity" style="--r:${rr.color}">${rr.label}</div>` : ''}</div></div></button>`;
+}
+function podium(top, kind) {
+  const pod = (it, n) => {
+    if (!it) return `<div class="pod p${n}"></div>`;
+    const isR = kind === 'r', name = isR ? eff(it).title : it.base.name;
+    const col = isR ? (RECIPE_CATS[eff(it).category] || RECIPE_CATS.autre).color : BAR_CATS[it.base.category].color;
+    return `<button class="pod p${n}" style="--cat:${col}" ${isR ? 'data-open-r' : 'data-open-b'}="${it.id}">
+      <div class="pod-img">${it.photo ? `<img src="${it.photo}" alt="">` : esc(name[0] || '?')}</div>
+      <div class="pod-name">${esc(name)}</div><div class="pod-step">${fmtNote(it.mine.rating)}</div></button>`;
+  };
+  return pod(top[1], 2) + pod(top[0], 1) + pod(top[2], 3);
+}
+function recipeResults() {
+  const q = norm(S.q);
+  let list = recipes().filter(r => {
+    const d = eff(r);
+    if (S.rcat !== 'all' && d.category !== S.rcat) return false;
+    if (S.favOnly && !r.favorite) return false;
+    if (!q) return true;
+    return norm(d.title + ' ' + d.ingredients.map(i => i.name).join(' ') + ' ' + (d.tags || []).join(' ')).includes(q);
+  }).sort((a, b) => (b.mine?.rating ?? -1) - (a.mine?.rating ?? -1) || (b.favorite - a.favorite) || eff(a).title.localeCompare(eff(b).title, 'fr'));
+  const top = q ? [] : list.filter(r => r.mine?.rating != null).slice(0, 3);
+  return `${top.length ? `<div class="section-label">Podium ${S.rcat === 'all' ? '' : '· ' + RECIPE_CATS[S.rcat].label}</div><div class="podium">${podium(top, 'r')}</div>` : ''}
+    ${list.length ? `<div class="section-label">${list.length} recette${list.length > 1 ? 's' : ''}</div>` : ''}${list.length ? `<div class="grid">${list.map(recipeCard).join('')}</div>` :
+      `<div class="empty"><b>${recipes().length ? 'Aucun résultat' : 'Aucune recette pour l’instant'}</b>${recipes().length ? 'Essayez un autre mot.' : 'Touchez + pour importer votre première recette.'}</div>`}`;
+}
+function renderRecipes() {
+  const chips = [['all', 'Toutes'], ...Object.entries(RECIPE_CATS).map(([k, v]) => [k, v.label])];
+  return `<header class="topbar"><h1>Mes recettes</h1>
+    <input class="search" id="q" type="search" placeholder="Chercher un titre, un ingrédient…" value="${esc(S.q)}">
+    <div class="chips"><button class="chip ${S.favOnly ? 'on' : ''}" data-fav>★ Favoris</button>${chips.map(([k, l]) => `<button class="chip ${S.rcat === k ? 'on' : ''}" data-rcat="${k}">${l}</button>`).join('')}</div></header>
+    <div id="results">${recipeResults()}</div>`;
+}
+
+function bottleCard(b) {
+  const c = BAR_CATS[b.base.category] || BAR_CATS.autre, r = rarity(b.mine?.rating);
+  return `<button class="card ${r ? 'r-' + r.k : ''}" style="--cat:${c.color}" data-open-b="${b.id}">
+    <span class="card-tag">${esc(c.label)}</span>${b.mine?.rating != null ? `<span class="card-score">${fmtNote(b.mine.rating)}</span>` : ''}
+    <div class="card-inner"><div class="card-photo">${b.photo ? `<img src="${b.photo}" alt="" loading="lazy">` : esc(b.base.name[0] || '?')}</div>
+    <div class="card-body"><div class="card-title">${esc(b.base.name)}</div>
+    <div class="card-meta">${b.base.brand ? `<span>${esc(b.base.brand)}</span>` : ''}</div>
+    ${r ? `<div class="rarity" style="--r:${r.color}">${r.label}</div>` : `<div class="card-meta">Pas encore noté</div>`}</div></div></button>`;
+}
+function barResults() {
+  const q = norm(S.q);
+  const inCat = bottles().filter(b => S.bcat === 'all' || b.base.category === S.bcat);
+  const list = inCat.filter(b => !q || norm(b.base.name + ' ' + b.base.brand + ' ' + b.base.country + ' ' + Object.values(b.base.extra || {}).join(' ')).includes(q))
+    .sort((a, b) => (b.mine?.rating ?? -1) - (a.mine?.rating ?? -1) || a.base.name.localeCompare(b.base.name, 'fr'));
+  const top = inCat.filter(b => b.mine?.rating != null).sort((a, b) => b.mine.rating - a.mine.rating).slice(0, 3);
+  return `${top.length && !q ? `<div class="section-label">Podium ${S.bcat === 'all' ? '' : '· ' + BAR_CATS[S.bcat].label}</div><div class="podium">${podium(top, 'b')}</div>` : ''}
+    ${list.length ? `<div class="section-label">${list.length} bouteille${list.length > 1 ? 's' : ''}</div><div class="grid">${list.map(bottleCard).join('')}</div>` :
+      `<div class="empty"><b>${bottles().length ? 'Aucun résultat' : 'Votre bar est vide'}</b>${bottles().length ? '' : 'Touchez + pour ajouter une bouteille.'}</div>`}`;
+}
+function renderBar() {
+  const chips = [['all', 'Tout'], ...Object.entries(BAR_CATS).map(([k, v]) => [k, v.label])];
+  return `<header class="topbar"><h1>Mon bar</h1>
+    <input class="search" id="q" type="search" placeholder="Chercher une bouteille, une distillerie…" value="${esc(S.q)}">
+    <div class="chips">${chips.map(([k, l]) => `<button class="chip ${S.bcat === k ? 'on' : ''}" data-bcat="${k}">${l}</button>`).join('')}</div></header>
+    <div id="results">${barResults()}</div>`;
+}
+
+function renderSettings() {
+  const lb = Prefs.get('lastBackup'), days = lb ? Math.floor((Date.now() - lb) / 864e5) : null;
+  const seg = (k, opts) => `<div class="seg" data-seg="${k}">${opts.map(([v, l]) => `<button data-v="${v}" class="${Prefs.get(k) === v ? 'on' : ''}">${l}</button>`).join('')}</div>`;
+  return `<header class="topbar"><h1>Réglages</h1></header><div class="set">
+    <div class="box"><h3>Moi</h3>
+      <div class="field"><label>Mon prénom</label><input id="p-name" value="${esc(Prefs.get('name'))}" placeholder="Affiché sur les cartes que j’envoie"></div></div>
+    <div class="box"><h3>Affichage</h3>
+      <div class="field"><label>Taille du texte</label>${seg('fs', [['n', 'Normal'], ['l', 'Grand'], ['xl', 'Très grand']])}</div>
+      <div class="field"><label>Thème</label>${seg('theme', [['auto', 'Auto'], ['light', 'Clair'], ['dark', 'Sombre']])}</div></div>
+    <div class="box"><h3>Sauvegarde</h3>
+      ${days == null ? '<div class="warn">Aucune sauvegarde pour l’instant.</div>' : days > 30 ? `<div class="warn">Dernière sauvegarde il y a ${days} jours.</div>` : `<div>Dernière sauvegarde : il y a ${days} jour${days > 1 ? 's' : ''}.</div>`}
+      <button class="big-btn" id="export">${ICONS.file} Exporter toutes mes données</button>
+      <button class="big-btn sec" id="import-file">Importer une sauvegarde ou une carte</button>
+      <div class="hint" style="font-size:.85rem;color:var(--muted)">${recipes().length} recettes · ${bottles().length} bouteilles. Le fichier contient aussi les photos. Rangez-le sur le NAS (appli Synology Drive) ou dans vos mails.</div></div>
+    <div class="box"><h3>Import intelligent (Claude)</h3>
+      <div class="field"><label>Clé API Anthropic</label><input id="p-key" type="password" value="${esc(Prefs.get('apiKey'))}" placeholder="sk-ant-…" autocomplete="off"><div class="hint">Reste uniquement dans ce téléphone. Plafond conseillé : 5 € dans la console Anthropic.</div></div>
+      <div class="field"><label>Modèle</label><input id="p-model" value="${esc(Prefs.get('model'))}"><div class="hint">Par défaut : claude-haiku-5-5 (le moins cher). Si l’import par lien échoue, essayez claude-sonnet-5-5.</div></div></div>
+    <div class="box"><h3>Exemples</h3><button class="big-btn danger" id="del-demo">Supprimer les cartes d’exemple</button></div>
+    <p style="text-align:center;color:var(--muted);font-size:.8rem">Titi-Sti · v0.2 · données 100 % locales</p></div>`;
+}
+
+function bindMain() {
+  const q = $('#q');
+  if (q) q.oninput = () => { S.q = q.value; $('#results').innerHTML = S.tab === 'bar' ? barResults() : recipeResults(); bindOpen(); };
+  document.querySelectorAll('[data-rcat]').forEach(b => b.onclick = () => { S.rcat = b.dataset.rcat; render(); });
+  document.querySelectorAll('[data-bcat]').forEach(b => b.onclick = () => { S.bcat = b.dataset.bcat; render(); });
+  const fav = $('[data-fav]'); if (fav) fav.onclick = () => { S.favOnly = !S.favOnly; render(); };
+  bindOpen();
+  if (S.tab === 'settings') bindSettings();
+}
+function bindOpen() {
+  document.querySelectorAll('#main [data-open-r]').forEach(b => b.onclick = () => openRecipe(b.dataset.openR));
+  document.querySelectorAll('#main [data-open-b]').forEach(b => b.onclick = () => openBottle(b.dataset.openB));
+}
+function bindSettings() {
+  $('#p-name').onchange = e => Prefs.set('name', e.target.value.trim());
+  $('#p-key').onchange = e => { Prefs.set('apiKey', e.target.value.trim()); toast('Clé enregistrée'); };
+  $('#p-model').onchange = e => Prefs.set('model', e.target.value.trim() || 'claude-haiku-5-5');
+  document.querySelectorAll('[data-seg]').forEach(seg => seg.querySelectorAll('button').forEach(b => b.onclick = () => { Prefs.set(seg.dataset.seg, b.dataset.v); applyLook(); render(); }));
+  $('#export').onclick = exportAll;
+  $('#import-file').onclick = importFile;
+  $('#del-demo').onclick = async () => {
+    const demo = S.items.filter(i => i.demo); if (!demo.length) return toast('Aucun exemple restant');
+    if (!await confirmSheet(`Supprimer ${demo.length} carte(s) d’exemple ?`, 'Supprimer')) return;
+    for (const d of demo) await remove(d.id); toast('Exemples supprimés'); render();
+  };
+}
+function applyLook() {
+  document.documentElement.dataset.fs = Prefs.get('fs');
+  const t = Prefs.get('theme'), dark = t === 'dark' || (t === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
+  document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+}
+
+/* =====================================================================
+   Fiche recette (style carnet)
+   ===================================================================== */
+function openRecipe(id, replace) {
+  const r = byId(id); if (!r) return;
+  const d = eff(r), c = RECIPE_CATS[d.category] || RECIPE_CATS.autre;
+  let servings = d.servings || null;
+  const el = screen(d.title, '', `<button class="icon-btn ${r.favorite ? 'on' : ''}" data-favb aria-label="Favori">${r.favorite ? ICONS.star : ICONS.starO}</button><button class="icon-btn" data-share aria-label="Partager">${ICONS.share}</button><button class="icon-btn" data-edit aria-label="Modifier">${ICONS.edit}</button>`);
+  el.style.setProperty('--cat', c.color);
+  const body = document.createElement('div'); body.className = 'paper'; el.appendChild(body);
+  const draw = () => {
+    const k = servings && d.servings ? servings / d.servings : 1;
+    body.innerHTML = `${r.photo ? `<img class="hero" src="${r.photo}" alt="">` : `<div class="hero-ph">${esc(d.title[0] || '?')}</div>`}
+    <div class="nb"><h1>${esc(d.title)}</h1>
+      ${r.origin?.author ? `<div class="origin">Inspirée de « ${esc(r.origin.title || d.title)} » de ${esc(r.origin.author)}</div>` : ''}
+      ${r.current ? `<div class="mod-banner"><span class="badge-mod">Modifiée</span> Vous avez modifié cette recette. <button data-orig>Voir l’original</button></div>` : ''}
+      <div class="facts"><span class="fact">${esc(c.label)}</span>${d.prepMin ? `<span class="fact">Prépa ${d.prepMin} min</span>` : ''}${d.cookMin ? `<span class="fact">Cuisson ${d.cookMin} min</span>` : ''}<span class="fact">${esc(d.difficulty)}</span></div>
+      ${scoreBox(r)}
+      <button class="big-btn" data-cook style="margin-top:14px;background:var(--cat);color:#fff">${ICONS.chef} Mode cuisine</button>
+      <h3>Ingrédients</h3>
+      ${d.servings ? `<div class="serv"><button data-s="-1" aria-label="Moins">−</button><b>${servings} portion${servings > 1 ? 's' : ''}</b><button data-s="1" aria-label="Plus">+</button></div>` : ''}
+      <ul class="ing">${d.ingredients.map(i => `<li><span class="q">${esc([fmtQty(i.qty == null ? null : i.qty * k), i.unit].filter(Boolean).join(' '))}</span><span>${esc(i.name)}</span></li>`).join('')}</ul>
+      <h3>Préparation</h3><ol class="steps">${d.steps.map(s => `<li>${esc(s)}</li>`).join('')}</ol>
+      ${d.notes ? `<h3>Notes</h3><div class="notes">${esc(d.notes)}</div>` : ''}
+      ${r.mine?.comment ? `<h3>Mon avis</h3><div class="notes">${esc(r.mine.comment)}</div>` : ''}
+      ${r.others?.length ? `<h3>Avis reçus</h3>${r.others.map(o => `<div class="avis" style="border-color:var(--paper-line)"><b>${esc(o.author)}</b>${fmtNote(o.rating)}/10${o.comment ? `<div class="notes" style="opacity:.75">${esc(o.comment)}</div>` : ''}</div>`).join('')}` : ''}
+      ${d.tags?.length ? `<p style="font-family:system-ui;opacity:.7">${d.tags.map(t => '#' + esc(t)).join(' ')}</p>` : ''}
+      ${r.sourceUrl ? `<p style="font-family:system-ui;font-size:.85rem;opacity:.7">Source : <a class="link" href="${esc(r.sourceUrl)}" target="_blank" rel="noopener">${esc(r.sourceUrl)}</a></p>` : ''}
+      <button class="big-btn danger" data-del style="margin-top:24px">${ICONS.trash} Supprimer la recette</button>
+    </div>`;
+    body.querySelectorAll('[data-s]').forEach(b => b.onclick = () => { servings = Math.max(1, servings + +b.dataset.s); draw(); });
+    body.querySelector('[data-rate]').onclick = () => rateItem(r);
+    body.querySelector('[data-cook]').onclick = () => cookMode(d, servings && d.servings ? servings / d.servings : 1, c.color);
+    const o = body.querySelector('[data-orig]'); if (o) o.onclick = () => showOriginal(r);
+    body.querySelector('[data-del]').onclick = async () => { if (await confirmSheet('Supprimer « ' + d.title + ' » ?', 'Supprimer')) { await remove(r.id); closeTop(); render(); toast('Recette supprimée'); } };
+  };
+  draw();
+  el.querySelector('[data-favb]').onclick = async () => { r.favorite = !r.favorite; await save(r); render(); openRecipe(r.id, true); };
+  el.querySelector('[data-edit]').onclick = () => editRecipe(r);
+  el.querySelector('[data-share]').onclick = () => shareCard(r);
+  replace ? replaceTop(el) : pushScreen(el);
+}
+function scoreBox(r) {
+  const rr = rarity(r.mine?.rating), avg = householdAvg(r);
+  return `<div class="box" style="display:flex;align-items:center;gap:16px;font-family:system-ui,sans-serif;background:color-mix(in srgb,var(--paper-text) 6%,transparent)">
+    <div class="score-big">${fmtNote(r.mine?.rating)}<small>/10</small></div>
+    <div style="flex:1">${rr ? `<div class="rarity" style="--r:${rr.color};font-size:.9rem">${rr.label}</div>` : '<div style="opacity:.7">Pas encore notée</div>'}
+    ${avg != null && r.others?.length ? `<div style="opacity:.75;font-size:.9rem">Moyenne du foyer : <b>${fmtNote(avg)}</b></div>` : ''}</div>
+    <button class="big-btn" data-rate style="width:auto;padding:12px 16px">Noter</button></div>`;
+}
+function showOriginal(r) {
+  const d = r.base;
+  const el = sheet(`<h2>Version originale</h2>
+    <div class="paper" style="border-radius:14px;padding:4px 14px 14px"><div class="nb" style="padding:10px 0"><h1 style="font-size:1.3rem">${esc(d.title)}</h1>
+    <h3>Ingrédients</h3><ul class="ing">${d.ingredients.map(i => `<li>${esc(ingLine(i))}</li>`).join('')}</ul>
+    <h3>Préparation</h3><ol class="steps">${d.steps.map(s => `<li>${esc(s)}</li>`).join('')}</ol></div></div>
+    <div style="display:flex;flex-direction:column;gap:10px;margin-top:14px"><button class="big-btn danger" data-restore>Restaurer l’original (efface mes modifications)</button><button class="big-btn sec" data-close>Fermer</button></div>`);
+  el.querySelector('[data-close]').onclick = () => closeTop();
+  el.querySelector('[data-restore]').onclick = async () => {
+    closeTop();
+    if (!await confirmSheet('Effacer vos modifications ?', 'Restaurer')) return;
+    r.current = null; await save(r); render(); openRecipe(r.id, true); toast('Original restauré');
+  };
+}
+
+/* ---------- mode cuisine ---------- */
+async function cookMode(d, k, color) {
+  let i = -1, lock = null; // -1 = ingrédients
+  try { lock = await navigator.wakeLock?.request('screen'); } catch { }
+  const el = document.createElement('div'); el.className = 'cook'; el.style.setProperty('--cat', color);
+  const n = d.steps.length;
+  const draw = () => {
+    el.innerHTML = `<div class="cook-top"><div class="prog"><i style="width:${(i + 1) / (n) * 100}%"></i></div><button data-x>Fermer</button></div>
+      <div class="cook-body">${i < 0 ? `<div class="cook-n">Ingrédients</div><div class="cook-ing">${d.ingredients.map(x => '• ' + esc(ingLine(x, k))).join('<br>')}</div>`
+        : `<div class="cook-n">Étape ${i + 1} / ${n}</div><div class="cook-step">${esc(d.steps[i])}</div>`}</div>
+      <div class="cook-nav"><button data-p ${i < 0 ? 'disabled style="opacity:.3"' : ''}>‹ Retour</button><button class="next" data-n>${i >= n - 1 ? 'Terminé ✓' : i < 0 ? 'Commencer ›' : 'Suivant ›'}</button></div>`;
+    el.querySelector('[data-x]').onclick = () => closeTop();
+    el.querySelector('[data-p]').onclick = () => { if (i > -1) { i--; draw(); } };
+    el.querySelector('[data-n]').onclick = () => { if (i >= n - 1) closeTop(); else { i++; draw(); } };
+  };
+  draw();
+  pushScreen(el, () => { try { lock?.release(); } catch { } });
+}
+
+/* ---------- édition recette ---------- */
+function editRecipe(r, draftNote) {
+  const isNew = !r.id || !byId(r.id);
+  const d = clone(eff(r));
+  let photo = r.photo || null;
+  const el = screen(isNew ? 'Nouvelle recette' : 'Modifier', `<div class="form">
+    ${draftNote ? `<div class="draft-note">${draftNote}</div>` : ''}
+    ${!isNew && !r.current ? `<div class="draft-note">L’original sera conservé : vous pourrez toujours y revenir.</div>` : ''}
+    <div class="field"><label>Photo</label><div class="photo-pick"><div class="ph" id="ph">${photo ? `<img src="${photo}">` : 'Aucune'}</div>
+      <div style="display:flex;flex-direction:column;gap:8px;flex:1"><button class="big-btn sec" data-pick style="padding:11px">Choisir / prendre</button>${photo ? '<button class="big-btn danger" data-nophoto style="padding:9px">Retirer</button>' : ''}</div></div></div>
+    <div class="field"><label>Titre</label><input id="f-title" value="${esc(d.title)}"></div>
+    <div class="row2"><div class="field"><label>Catégorie</label><select id="f-cat">${Object.entries(RECIPE_CATS).map(([k, v]) => `<option value="${k}" ${d.category === k ? 'selected' : ''}>${v.label}</option>`).join('')}</select></div>
+      <div class="field"><label>Difficulté</label><select id="f-diff">${DIFFS.map(x => `<option ${d.difficulty === x ? 'selected' : ''}>${x}</option>`).join('')}</select></div></div>
+    <div class="row3"><div class="field"><label>Portions</label><input id="f-serv" type="number" inputmode="numeric" min="1" value="${d.servings ?? ''}"></div>
+      <div class="field"><label>Prépa (min)</label><input id="f-prep" type="number" inputmode="numeric" value="${d.prepMin ?? ''}"></div>
+      <div class="field"><label>Cuisson (min)</label><input id="f-cook" type="number" inputmode="numeric" value="${d.cookMin ?? ''}"></div></div>
+    <div class="field"><label>Ingrédients</label><textarea id="f-ing" rows="8">${esc(d.ingredients.map(i => ingLine(i)).join('\n'))}</textarea><div class="hint">Un par ligne, ex. « 200 g farine », « 3 œufs ».</div></div>
+    <div class="field"><label>Étapes</label><textarea id="f-steps" rows="10">${esc(d.steps.join('\n\n'))}</textarea><div class="hint">Séparez les étapes par une ligne vide.</div></div>
+    <div class="field"><label>Notes</label><textarea id="f-notes" rows="3">${esc(d.notes || '')}</textarea></div>
+    <div class="field"><label>Étiquettes</label><input id="f-tags" value="${esc((d.tags || []).join(', '))}" placeholder="rapide, été, apéro"></div>
+    <div class="field"><label>Lien d’origine</label><input id="f-src" value="${esc(r.sourceUrl || '')}" placeholder="https://…"></div>
+    <button class="big-btn" data-save>Enregistrer</button></div>`);
+  const setPhoto = (p) => { photo = p; el.querySelector('#ph').innerHTML = p ? `<img src="${p}">` : 'Aucune'; };
+  el.querySelector('[data-pick]').onclick = async () => { const p = await pickImage(); if (p) setPhoto(p); };
+  const np = el.querySelector('[data-nophoto]'); if (np) np.onclick = () => { setPhoto(null); np.remove(); };
+  el.querySelector('[data-save]').onclick = async () => {
+    const v = (id) => el.querySelector(id).value;
+    const nd = {
+      title: v('#f-title').trim() || 'Recette sans titre', category: v('#f-cat'), difficulty: v('#f-diff'),
+      servings: +v('#f-serv') || null, prepMin: +v('#f-prep') || null, cookMin: +v('#f-cook') || null,
+      ingredients: v('#f-ing').split('\n').map(parseIng).filter(Boolean),
+      steps: v('#f-steps').split(/\n\s*\n/).map(s => s.replace(/\s*\n\s*/g, ' ').trim()).filter(Boolean),
+      notes: v('#f-notes').trim(), tags: v('#f-tags').split(',').map(s => s.trim()).filter(Boolean),
+    };
+    // Une seule étape longue sans lignes vides ? on découpe par ligne.
+    if (nd.steps.length === 1 && v('#f-steps').includes('\n')) nd.steps = v('#f-steps').split('\n').map(s => s.trim()).filter(Boolean);
+    const item = isNew ? { id: r.id || uid(), kind: 'recipe', createdAt: Date.now(), base: nd, current: null, favorite: false, origin: r.origin || null, mine: { rating: null, comment: '', tastedAt: '' }, others: [] } : r;
+    if (!isNew) {
+      if (JSON.stringify(nd) !== JSON.stringify(r.base)) item.current = nd; else item.current = null;
+    }
+    item.photo = photo; item.sourceUrl = v('#f-src').trim();
+    await save(item); closeTop(); render();
+    if (isNew) { closeAll(); openRecipe(item.id); } else openRecipe(item.id, true);
+    toast('Enregistré');
+  };
+  pushScreen(el);
+}
+
+/* =====================================================================
+   Fiche bouteille
+   ===================================================================== */
+function openBottle(id, replace) {
+  const b = byId(id); if (!b) return;
+  const d = b.base, c = BAR_CATS[d.category] || BAR_CATS.autre, r = rarity(b.mine?.rating), avg = householdAvg(b);
+  const kv = [['Catégorie', c.label], ['Distillerie / marque', d.brand], ['Pays', d.country], ['Degré', d.abv != null && d.abv !== '' ? String(d.abv).replace('.', ',') + ' %' : ''], ['Prix', d.price ? d.price + ' €' : ''],
+    ...c.extra.map(([k, l]) => [l, d.extra?.[k]])].filter(([, v]) => v);
+  const el = screen(d.name, `
+    ${b.photo ? `<img class="hero" src="${b.photo}" alt="">` : `<div class="hero-ph" style="--cat:${c.color}">${esc(d.name[0] || '?')}</div>`}
+    <div class="bt"><h1>${esc(d.name)}</h1><div class="sub">${esc([d.brand, d.country].filter(Boolean).join(' · '))}</div>
+      <div class="box" style="display:flex;align-items:center;gap:16px">
+        <div class="score-big">${fmtNote(b.mine?.rating)}<small>/10</small></div>
+        <div style="flex:1">${r ? `<div class="rarity" style="--r:${r.color};font-size:.9rem">${r.label}</div>` : '<div style="color:var(--muted)">Pas encore noté</div>'}
+        ${avg != null && b.others?.length ? `<div style="color:var(--muted);font-size:.9rem">Moyenne du foyer : <b style="color:var(--text)">${fmtNote(avg)}</b></div>` : ''}</div>
+        <button class="big-btn" data-rate style="width:auto;padding:12px 16px">Noter</button></div>
+      ${b.mine?.comment ? `<div class="box"><h3>Mon avis</h3><div class="notes">${esc(b.mine.comment)}</div>${b.mine.tastedAt ? `<div style="color:var(--muted);font-size:.85rem;margin-top:6px">Goûté le ${esc(b.mine.tastedAt)}</div>` : ''}</div>` : ''}
+      ${b.others?.length ? `<div class="box"><h3>Avis reçus</h3>${b.others.map(o => `<div class="avis"><b>${esc(o.author)}</b>${fmtNote(o.rating)}/10${o.comment ? `<div class="notes" style="color:var(--muted)">${esc(o.comment)}</div>` : ''}</div>`).join('')}</div>` : ''}
+      ${d.description ? `<div class="box"><h3>Description</h3><div class="notes">${esc(d.description)}</div></div>` : ''}
+      ${kv.length ? `<dl class="kv">${kv.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl>` : ''}
+      <button class="big-btn danger" data-del style="margin-top:10px">${ICONS.trash} Supprimer la bouteille</button></div>`,
+    `<button class="icon-btn" data-share aria-label="Partager">${ICONS.share}</button><button class="icon-btn" data-edit aria-label="Modifier">${ICONS.edit}</button>`);
+  el.querySelector('[data-rate]').onclick = () => rateItem(b);
+  el.querySelector('[data-edit]').onclick = () => editBottle(b);
+  el.querySelector('[data-share]').onclick = () => shareCard(b);
+  el.querySelector('[data-del]').onclick = async () => { if (await confirmSheet('Supprimer « ' + d.name + ' » ?', 'Supprimer')) { await remove(b.id); closeTop(); render(); toast('Bouteille supprimée'); } };
+  replace ? replaceTop(el) : pushScreen(el);
+}
+function rateItem(b) {
+  const reopen = () => b.kind === 'recipe' ? openRecipe(b.id, true) : openBottle(b.id, true);
+  const m = b.mine || { rating: null, comment: '', tastedAt: '' };
+  let val = m.rating ?? 7;
+  const el = sheet(`<h2>Ma note</h2>
+    <div class="rating-in"><input type="range" min="0" max="10" step="0.5" value="${val}" id="rg"><output id="ro">${fmtNote(val)}</output></div>
+    <div id="rr" style="text-align:center;margin:6px 0 12px"></div>
+    <div class="field"><label>Mon commentaire (reste privé sauf si je le partage)</label><textarea id="rc" rows="4">${esc(m.comment)}</textarea></div>
+    <div class="field" style="margin-top:10px"><label>${b.kind === 'recipe' ? 'Date' : 'Date de dégustation'}</label><input id="rd" type="date" value="${esc(m.tastedAt || today())}"></div>
+    <div style="display:flex;flex-direction:column;gap:10px;margin-top:14px"><button class="big-btn" data-ok>Enregistrer</button>${m.rating != null ? '<button class="big-btn sec" data-clear>Retirer ma note</button>' : ''}</div>`);
+  const upd = () => { $('#ro').textContent = fmtNote(val); const r = rarity(val); $('#rr').innerHTML = `<span class="rarity" style="--r:${r.color};font-size:1rem">${r.label}</span>`; };
+  upd(); $('#rg').oninput = e => { val = +e.target.value; upd(); };
+  el.querySelector('[data-ok]').onclick = async () => { b.mine = { rating: val, comment: $('#rc').value.trim(), tastedAt: $('#rd').value }; await save(b); closeTop(); render(); reopen(); };
+  const cl = el.querySelector('[data-clear]'); if (cl) cl.onclick = async () => { b.mine = { ...m, rating: null }; await save(b); closeTop(); render(); reopen(); };
+}
+function editBottle(b, draftNote) {
+  const isNew = !b.id || !byId(b.id);
+  const d = clone(b.base || { name: '', category: 'gin', brand: '', country: '', abv: null, description: '', price: null, extra: {} });
+  let photo = b.photo || null;
+  const el = screen(isNew ? 'Nouvelle bouteille' : 'Modifier', `<div class="form">
+    ${draftNote ? `<div class="draft-note">${draftNote}</div>` : ''}
+    <div class="field"><label>Photo</label><div class="photo-pick"><div class="ph" id="ph">${photo ? `<img src="${photo}">` : 'Aucune'}</div>
+      <div style="display:flex;flex-direction:column;gap:8px;flex:1"><button class="big-btn sec" data-pick style="padding:11px">Choisir / prendre</button>
+      <button class="big-btn sec" data-ai style="padding:11px">✨ Remplir depuis l’étiquette</button></div></div></div>
+    <div class="field"><label>Nom</label><input id="b-name" value="${esc(d.name)}"></div>
+    <div class="row2"><div class="field"><label>Catégorie</label><select id="b-cat">${Object.entries(BAR_CATS).map(([k, v]) => `<option value="${k}" ${d.category === k ? 'selected' : ''}>${v.label}</option>`).join('')}</select></div>
+      <div class="field"><label>Degré (%)</label><input id="b-abv" type="number" step="0.1" inputmode="decimal" value="${d.abv ?? ''}"></div></div>
+    <div class="row2"><div class="field"><label>Distillerie / marque</label><input id="b-brand" value="${esc(d.brand)}"></div>
+      <div class="field"><label>Pays</label><input id="b-country" value="${esc(d.country)}"></div></div>
+    <div id="b-extra"></div>
+    <div class="field"><label>Prix (€)</label><input id="b-price" type="number" step="0.5" inputmode="decimal" value="${d.price ?? ''}"></div>
+    <div class="field"><label>Description</label><textarea id="b-desc" rows="4">${esc(d.description)}</textarea></div>
+    <button class="big-btn" data-save>Enregistrer</button></div>`);
+  const drawExtra = () => {
+    const cat = el.querySelector('#b-cat').value;
+    el.querySelector('#b-extra').innerHTML = BAR_CATS[cat].extra.map(([k, l]) => `<div class="field" style="margin-bottom:14px"><label>${esc(l)}</label><input data-x="${k}" value="${esc(d.extra?.[k] || '')}"></div>`).join('');
+    el.querySelectorAll('[data-x]').forEach(i => i.oninput = () => { d.extra = d.extra || {}; d.extra[i.dataset.x] = i.value; });
+  };
+  drawExtra(); el.querySelector('#b-cat').onchange = drawExtra;
+  const setPhoto = (p) => { photo = p; el.querySelector('#ph').innerHTML = p ? `<img src="${p}">` : 'Aucune'; };
+  el.querySelector('[data-pick]').onclick = async () => { const p = await pickImage(); if (p) setPhoto(p); };
+  el.querySelector('[data-ai]').onclick = async () => {
+    const p = photo || await pickImage(true); if (!p) return; setPhoto(p);
+    const j = await withLoading('Lecture de l’étiquette…', () => askClaude({ system: SYS_BOTTLE, content: [imgBlock(p), { type: 'text', text: 'Identifie cette bouteille.' }] }));
+    if (!j) return;
+    const nb = cleanBottle(j);
+    const set = (id, v) => { if (v != null && v !== '') el.querySelector(id).value = v; };
+    set('#b-name', nb.name); el.querySelector('#b-cat').value = nb.category; set('#b-abv', nb.abv); set('#b-brand', nb.brand); set('#b-country', nb.country); set('#b-desc', nb.description);
+    d.extra = { ...(d.extra || {}), ...nb.extra }; drawExtra(); toast('Vérifiez les champs avant d’enregistrer');
+  };
+  el.querySelector('[data-save]').onclick = async () => {
+    const v = (id) => el.querySelector(id).value;
+    const cat = v('#b-cat'), extra = {}; for (const [k] of BAR_CATS[cat].extra) extra[k] = (d.extra?.[k] || '').trim();
+    const nd = { name: v('#b-name').trim() || 'Sans nom', category: cat, brand: v('#b-brand').trim(), country: v('#b-country').trim(), abv: v('#b-abv') === '' ? null : +v('#b-abv'), price: v('#b-price') === '' ? null : +v('#b-price'), description: v('#b-desc').trim(), extra };
+    const item = isNew ? { id: uid(), kind: 'bottle', createdAt: Date.now(), mine: { rating: null, comment: '', tastedAt: '' }, others: [] } : b;
+    item.base = nd; item.photo = photo;
+    await save(item); closeTop(); render();
+    if (isNew) { closeAll(); openBottle(item.id); if (item.mine.rating == null) rateItem(item); } else openBottle(item.id, true);
+    toast('Enregistré');
+  };
+  pushScreen(el);
+}
+
+/* =====================================================================
+   Partage : carte recto-verso + QR + lien + fichier
+   ===================================================================== */
+function cardFace(item) {
+  if (item.kind === 'recipe') {
+    const d = eff(item), c = RECIPE_CATS[d.category] || RECIPE_CATS.autre, t = (d.prepMin || 0) + (d.cookMin || 0), r = rarity(item.mine?.rating);
+    return { color: c.color, rk: r ? 'r-' + r.k : '', photo: item.photo, letter: d.title[0], title: d.title, meta: [c.label, t ? t + ' min' : '', item.mine?.rating != null ? fmtNote(item.mine.rating) + '/10' : '', r?.label].filter(Boolean) };
+  }
+  const d = item.base, c = BAR_CATS[d.category] || BAR_CATS.autre, r = rarity(item.mine?.rating);
+  return { color: c.color, rk: r ? 'r-' + r.k : '', photo: item.photo, letter: d.name[0], title: d.name, meta: [c.label, d.brand, item.mine?.rating != null ? fmtNote(item.mine.rating) + '/10' : '', r?.label].filter(Boolean) };
+}
+async function shareCard(item) {
+  const f = cardFace(item);
+  const el = sheet(`<h2>Partager la carte</h2>
+    <div class="flip" id="flip" style="--cat:${f.color}"><div class="flip-in">
+      <div class="face ${f.rk}"><div class="face-in"><div class="fp">${f.photo ? `<img src="${f.photo}">` : esc(f.letter || '?')}</div>
+        <div class="ft"><h3>${esc(f.title)}</h3><div class="card-meta">${f.meta.map(esc).join(' · ')}</div></div></div></div>
+      <div class="face backface ${f.rk}"><div class="face-in" id="qrzone"><div class="spinner"></div></div></div></div></div>
+    <div class="flip-hint">Touchez la carte pour la retourner</div>
+    ${item.mine?.rating != null ? `<label class="check"><input type="checkbox" id="withav" checked> Joindre mon avis (${fmtNote(item.mine.rating)}/10)</label>` : ''}
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <button class="big-btn" data-link>${ICONS.share} Envoyer le lien (WhatsApp…)</button>
+      <button class="big-btn sec" data-file>${ICONS.file} Envoyer en fichier (avec photo)</button></div>`);
+  const flip = el.querySelector('#flip'); flip.onclick = () => flip.classList.toggle('back');
+  let url = '';
+  const build = async () => {
+    const withAv = el.querySelector('#withav')?.checked;
+    url = appBase() + '#c=' + await packPayload(cardPayload(item, withAv));
+    const z = el.querySelector('#qrzone');
+    if (url.length > QR_MAX || typeof qrcode === 'undefined') {
+      z.innerHTML = `<b>Trop long pour un QR code</b><div class="card-meta" style="justify-content:center">Utilisez « Envoyer en fichier » ou le lien.</div>`;
+      return;
+    }
+    try {
+      const qr = qrcode(0, 'L'); qr.addData(url, 'Byte'); qr.make();
+      z.innerHTML = `<div class="qr">${qr.createSvgTag({ cellSize: 4, margin: 2, scalable: true })}</div><div class="card-meta" style="justify-content:center">Scannez avec l’appareil photo</div>`;
+    } catch { z.innerHTML = '<b>Trop long pour un QR code</b>'; }
+  };
+  await build();
+  const av = el.querySelector('#withav'); if (av) av.onchange = build;
+  el.querySelector('[data-link]').onclick = async () => {
+    const text = `${f.title} — carte partagée par ${Prefs.get('name') || 'moi'}`;
+    try { if (navigator.share) { await navigator.share({ title: f.title, text, url }); return; } } catch (e) { if (e.name === 'AbortError') return; }
+    try { await navigator.clipboard.writeText(url); toast('Lien copié'); } catch { prompt('Copiez ce lien :', url); }
+  };
+  el.querySelector('[data-file]').onclick = async () => {
+    const withAv = el.querySelector('#withav')?.checked;
+    const data = { app: APP_ID, type: 'carte', payload: cardPayload(item, withAv), photo: item.photo || null };
+    const name = norm(f.title).replace(/ /g, '-').slice(0, 40) + '.carte.json';
+    await shareOrDownload(new File([JSON.stringify(data)], name, { type: 'application/json' }), f.title);
+  };
+}
+async function shareOrDownload(file, title) {
+  try { if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title }); return true; } } catch (e) { if (e.name === 'AbortError') return false; }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(file); a.download = file.name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000); toast('Fichier téléchargé'); return true;
+}
+
+/* =====================================================================
+   Sauvegarde / import de fichiers
+   ===================================================================== */
+async function exportAll() {
+  const data = { app: APP_ID, type: 'sauvegarde', v: 1, exportedAt: new Date().toISOString(), by: Prefs.get('name'), items: S.items };
+  const ok = await shareOrDownload(new File([JSON.stringify(data)], `sauvegarde-titi-sti-${today()}.json`, { type: 'application/json' }), 'Sauvegarde Titi-Sti');
+  if (ok) { Prefs.set('lastBackup', Date.now()); render(); }
+}
+function importFile() {
+  const inp = document.createElement('input'); inp.type = 'file'; inp.accept = '.json,application/json';
+  inp.onchange = async () => {
+    const f = inp.files[0]; if (!f) return;
+    let data; try { data = JSON.parse(await f.text()); } catch { return toast('Fichier illisible'); }
+    if (data.app !== APP_ID) return toast('Ce fichier ne vient pas de l’appli');
+    if (data.type === 'carte') return handleIncoming(data.payload, data.photo);
+    if (data.type === 'sauvegarde') {
+      const items = data.items || [];
+      if (!await confirmSheet(`Importer ${items.length} cartes ? Les cartes existantes plus récentes sont conservées.`, 'Importer', false)) return;
+      let n = 0;
+      for (const it of items) { const cur = byId(it.id); if (!cur || (it.updatedAt || 0) > (cur.updatedAt || 0)) { await Store.put(it); n++; } }
+      S.items = await Store.all(); render(); toast(n + ' carte(s) importée(s)');
+    }
+  };
+  inp.click();
+}
+
+/* =====================================================================
+   Bouton + : ajouter / importer
+   ===================================================================== */
+function addMenu() {
+  if (S.tab === 'bar') {
+    const el = sheet(`<h2>Ajouter une bouteille</h2>
+      <button class="menu-item" data-a="label">${ICONS.camera}<span>Photo de l’étiquette<small>Claude remplit la fiche pour vous</small></span></button>
+      <button class="menu-item" data-a="manual">${ICONS.pen}<span>Saisie manuelle</span></button>
+      <button class="menu-item" data-a="file">${ICONS.file}<span>Carte reçue en fichier</span></button>`);
+    el.querySelector('[data-a=label]').onclick = async () => {
+      closeTop(); const p = await pickImage(true); if (!p) return;
+      const j = await withLoading('Lecture de l’étiquette…', () => askClaude({ system: SYS_BOTTLE, content: [imgBlock(p), { type: 'text', text: 'Identifie cette bouteille.' }] }));
+      if (j) editBottle({ base: cleanBottle(j), photo: p }, '✨ Brouillon rempli par Claude : vérifiez avant d’enregistrer.');
+    };
+    el.querySelector('[data-a=manual]').onclick = () => { closeTop(); editBottle({}); };
+    el.querySelector('[data-a=file]').onclick = () => { closeTop(); importFile(); };
+    return;
+  }
+  const el = sheet(`<h2>Ajouter une recette</h2>
+    <button class="menu-item" data-a="url">${ICONS.link}<span>Depuis un lien<small>Astuce : sur Marmiton, Partager → cette appli</small></span></button>
+    <button class="menu-item" data-a="text">${ICONS.text}<span>Coller un texte<small>Message, note, page copiée</small></span></button>
+    <button class="menu-item" data-a="photo">${ICONS.camera}<span>Photo<small>Fiche manuscrite, livre, capture</small></span></button>
+    <button class="menu-item" data-a="manual">${ICONS.pen}<span>Saisie manuelle</span></button>
+    <button class="menu-item" data-a="file">${ICONS.file}<span>Carte reçue en fichier</span></button>`);
+  el.querySelector('[data-a=url]').onclick = () => { closeTop(); importUrl(); };
+  el.querySelector('[data-a=text]').onclick = () => { closeTop(); importText(); };
+  el.querySelector('[data-a=photo]').onclick = async () => {
+    closeTop(); const p = await pickImage(true); if (!p) return;
+    const j = await withLoading('Lecture de la photo…', () => askClaude({ system: SYS_RECIPE, content: [imgBlock(p), { type: 'text', text: 'Extrais la recette de cette image.' }] }));
+    if (j) editRecipe({ base: cleanRecipe(j), current: null }, '✨ Brouillon rempli par Claude : vérifiez avant d’enregistrer.');
+  };
+  el.querySelector('[data-a=manual]').onclick = () => { closeTop(); editRecipe({ base: cleanRecipe({ title: '' }), current: null }); };
+  el.querySelector('[data-a=file]').onclick = () => { closeTop(); importFile(); };
+}
+function importUrl(prefill = '') {
+  const el = sheet(`<h2>Importer depuis un lien</h2>
+    <div class="field"><input id="iu" type="url" inputmode="url" placeholder="https://www.marmiton.org/…" value="${esc(prefill)}" style="width:100%;border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:13px;font-size:1rem"></div>
+    <button class="big-btn" data-go style="margin-top:12px">Importer</button>`);
+  const go = async () => {
+    const url = el.querySelector('#iu').value.trim(); if (!/^https?:\/\//.test(url)) return toast('Lien invalide');
+    closeTop(); await runUrlImport(url);
+  };
+  el.querySelector('[data-go]').onclick = go;
+  if (prefill) go();
+}
+async function runUrlImport(url) {
+  const dup = recipes().find(r => r.sourceUrl === url);
+  if (dup && !await confirmSheet('Vous avez déjà importé cette recette (« ' + eff(dup).title + ' »). Importer quand même ?', 'Importer', false)) return;
+  const j = await withLoading('Claude lit la recette…', () => askClaude({ system: SYS_RECIPE, useFetch: true, content: `Récupère cette page avec l'outil web_fetch, puis extrais la recette : ${url}` }));
+  if (j) { const r = { base: cleanRecipe(j), current: null, sourceUrl: url }; editRecipe(r, '✨ Brouillon rempli par Claude : vérifiez, ajoutez une photo, puis enregistrez.'); }
+}
+function importText(prefill = '') {
+  const el = sheet(`<h2>Coller un texte</h2>
+    <div class="field"><textarea id="it" rows="10" placeholder="Collez ici la recette (ingrédients, étapes…)" style="width:100%;border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:12px;font-size:1rem">${esc(prefill)}</textarea></div>
+    <button class="big-btn" data-go style="margin-top:12px">Analyser</button>`);
+  el.querySelector('[data-go]').onclick = async () => {
+    const t = el.querySelector('#it').value.trim(); if (t.length < 20) return toast('Texte trop court');
+    closeTop();
+    const j = await withLoading('Claude lit la recette…', () => askClaude({ system: SYS_RECIPE, content: 'Voici une recette :\n\n' + t.slice(0, 30000) }));
+    if (j) editRecipe({ base: cleanRecipe(j), current: null }, '✨ Brouillon rempli par Claude : vérifiez avant d’enregistrer.');
+  };
+}
+async function withLoading(msg, fn) {
+  const el = sheet(`<div class="loading"><div class="spinner"></div><b>${esc(msg)}</b><span style="color:var(--muted);font-size:.9rem">Quelques secondes…</span></div>`);
+  try { const r = await fn(); if (stack.at(-1)?.el === el) closeTop(); return r; }
+  catch (e) {
+    if (stack.at(-1)?.el === el) closeTop();
+    if (e.message === 'NOKEY') {
+      if (await confirmSheet('Ajoutez d’abord votre clé API Claude dans Réglages.', 'Aller aux réglages', false)) { closeAll(); S.tab = 'settings'; render(); }
+    } else previewSheet({ title: 'Import impossible', body: `<p>${esc(e.message)}</p>`, actions: [['ok', 'OK', 'sec']] });
+    return null;
+  }
+}
+
+/* =====================================================================
+   Exemples (premier lancement)
+   ===================================================================== */
+function seed() {
+  const mk = (o) => ({ createdAt: Date.now(), demo: true, ...o });
+  return [
+    mk({ id: uid(), kind: 'recipe', favorite: true, photo: null, sourceUrl: '', current: null, origin: null, mine: { rating: 9, comment: 'La meilleure, à refaire pour les anniversaires.', tastedAt: '' }, others: [], base: {
+      title: 'Tarte au citron meringuée', category: 'dessert', servings: 6, prepMin: 40, cookMin: 25, difficulty: 'Moyen',
+      ingredients: [{ qty: 1, unit: '', name: 'pâte sablée' }, { qty: 3, unit: '', name: 'citrons jaunes' }, { qty: 150, unit: 'g', name: 'sucre' }, { qty: 3, unit: '', name: 'œufs' }, { qty: 80, unit: 'g', name: 'beurre' }, { qty: 20, unit: 'g', name: 'maïzena' }],
+      steps: ['Préchauffer le four à 180 °C et cuire la pâte à blanc 15 minutes.', 'Presser les citrons, mélanger le jus avec 100 g de sucre, les jaunes et la maïzena.', 'Cuire à feu doux en remuant jusqu’à épaississement, puis ajouter le beurre.', 'Verser la crème sur le fond de tarte.', 'Monter les blancs en neige ferme avec le reste du sucre, étaler sur la tarte.', 'Dorer 8 à 10 minutes au four.'],
+      tags: ['classique'], notes: '' } }),
+    mk({ id: uid(), kind: 'recipe', favorite: false, photo: null, sourceUrl: '', current: null, origin: null, mine: { rating: 7.5, comment: '', tastedAt: '' }, others: [], base: {
+      title: 'Gin tonic concombre-poivre', category: 'boisson', servings: 1, prepMin: 3, cookMin: null, difficulty: 'Facile',
+      ingredients: [{ qty: 5, unit: 'cl', name: 'gin' }, { qty: 15, unit: 'cl', name: 'tonic' }, { qty: 3, unit: 'tranches', name: 'concombre' }, { qty: 1, unit: 'pincée', name: 'poivre noir concassé' }],
+      steps: ['Remplir un grand verre de glaçons.', 'Ajouter le gin et les tranches de concombre.', 'Compléter avec le tonic en le versant le long d’une cuillère.', 'Finir avec le poivre.'],
+      tags: ['apéro'], notes: '' } }),
+    mk({ id: uid(), kind: 'bottle', photo: null, others: [], mine: { rating: 9.5, comment: 'Très floral, parfait avec un tonic neutre.', tastedAt: '2026-06-14' },
+      base: { name: 'Gin du Jardin (exemple)', category: 'gin', brand: 'Distillerie exemple', country: 'France', abv: 43, price: 39, description: 'Notes de genièvre, agrumes et fleur de sureau.', extra: { botanicals: 'Genièvre, citron, sureau', tonic: 'Tonic neutre', garnish: 'Zeste de citron' } } }),
+    mk({ id: uid(), kind: 'bottle', photo: null, others: [{ author: 'Elle', rating: 8, comment: 'Plus sec que je pensais.', at: '2026-07-01' }], mine: { rating: 7.5, comment: '', tastedAt: '' },
+      base: { name: 'London Dry (exemple)', category: 'gin', brand: 'Exemple & Fils', country: 'Royaume-Uni', abv: 47, price: 28, description: 'Classique, très genièvre.', extra: { botanicals: 'Genièvre, coriandre', tonic: 'Indian tonic', garnish: 'Citron vert' } } }),
+    mk({ id: uid(), kind: 'bottle', photo: null, others: [], mine: { rating: 8.5, comment: '', tastedAt: '' },
+      base: { name: 'Rhum ambré 8 ans (exemple)', category: 'rhum', brand: 'Exemple', country: 'Martinique', abv: 42, price: 45, description: 'Vanille, bois, fruits secs.', extra: { age: '8 ans', origin: 'Canne (agricole)', spiced: 'Non' } } }),
+    mk({ id: uid(), kind: 'bottle', photo: null, others: [], mine: { rating: 6, comment: '', tastedAt: '' },
+      base: { name: 'Sirop de sureau maison', category: 'sirop', brand: 'Fait maison', country: 'France', abv: 0, price: null, description: '', extra: { flavor: 'Sureau', usage: 'Gin tonic, limonade' } } }),
+  ];
+}
+
+/* =====================================================================
+   Démarrage
+   ===================================================================== */
+async function checkIncoming() {
+  const h = location.hash;
+  if (h.startsWith('#c=')) {
+    try { history.replaceState(null, '', appBase()); } catch { }
+    try { await handleIncoming(await unpackPayload(h.slice(3))); } catch (e) { console.error(e); toast('Carte illisible'); }
+    return;
+  }
+  // Partage Android (share_target) : ?url=…&text=…
+  const sp = new URLSearchParams(location.search);
+  if (sp.has('url') || sp.has('text')) {
+    const blob = (sp.get('url') || '') + ' ' + (sp.get('text') || '');
+    try { history.replaceState(null, '', appBase()); } catch { }
+    const m = blob.match(/https?:\/\/\S+/);
+    if (m) { S.tab = 'recipes'; render(); importUrl(m[0]); }
+    else if (blob.trim()) { S.tab = 'recipes'; render(); importText(blob.trim()); }
+  }
+}
+function askName() {
+  const el = sheet(`<h2>Bienvenue dans Titi-Sti 👋</h2><p style="margin-top:0">Votre prénom apparaîtra sur les cartes que vous partagez.</p>
+    <div class="field"><input id="nm" placeholder="Votre prénom" style="width:100%;border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:13px;font-size:1.05rem"></div>
+    <button class="big-btn" data-ok style="margin-top:12px">C’est parti</button>`);
+  el.querySelector('[data-ok]').onclick = () => { const v = el.querySelector('#nm').value.trim(); if (!v) return toast('Indiquez un prénom'); Prefs.set('name', v); closeTop(); };
+}
+async function start() {
+  Prefs.load(); applyLook();
+  matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', applyLook);
+  await Store.open();
+  S.items = await Store.all();
+  if (!Prefs.get('seeded') && !S.items.length) { for (const it of seed()) await save(it); Prefs.set('seeded', true); }
+  document.querySelectorAll('.tabbar button').forEach(b => b.onclick = () => { closeAll(); S.tab = b.dataset.tab; S.q = ''; render(); scrollTo(0, 0); });
+  $('#fab').onclick = addMenu;
+  let framed = false; try { framed = window.self !== window.top; } catch { framed = true; }
+  if (framed) { const d = document.createElement('div'); d.className = 'preview-banner'; d.textContent = 'Aperçu : l’import Claude, le partage et la sauvegarde ne marchent qu’une fois l’appli installée sur le téléphone.'; document.body.prepend(d); }
+  render();
+  if (!Prefs.get('name') && !location.hash.startsWith('#c=')) askName();
+  await checkIncoming();
+  window.addEventListener('hashchange', checkIncoming);
+  if ('serviceWorker' in navigator && location.protocol === 'https:') { try { navigator.serviceWorker.register('sw.js').catch(() => { }); } catch { } }
+}
+start();
+
+</script>
+</body>
+</html>

@@ -20,7 +20,7 @@ const BAR_CATS = {
   autre:   { label: 'Autre',   color: '#7d8590', extra: [] },
 };
 const DIFFS = ['Facile', 'Moyen', 'Difficile'];
-const QR_MAX = 1800; // caractères max d'un lien encodé en QR (lisible écran à écran)
+const QR_MAX = 1500; // caractères max d'un lien encodé en QR (lisible écran à écran)
 
 /* ---------- petites aides ---------- */
 const $ = (s, el = document) => el.querySelector(s);
@@ -50,7 +50,7 @@ function sanitizeItem(it) {
 function sanitizePayload(p) {
   if (!p || typeof p !== 'object' || !p.d || (p.k !== 'r' && p.k !== 'b')) return null;
   return { v: 1, k: p.k, id: safeId(p.id), by: str(p.by, 40) || 'Quelqu’un', d: p.d, src: safeUrl(p.src), mod: !!p.mod,
-    av: p.av && note(p.av.r) != null ? { r: note(p.av.r), c: str(p.av.c) } : null };
+    av: p.av && note(p.av.r) != null ? { r: note(p.av.r), c: str(p.av.c) } : null, ph: safeImg(p.ph) };
 }
 
 const ICONS = {
@@ -190,6 +190,36 @@ async function compressImage(src, maxSide = 1200, target = 220_000) {
   while (out.length * .75 > target && q > .4) { q -= .1; out = c.toDataURL('image/jpeg', q); }
   return out;
 }
+// Petite version d'une photo (pour l'embarquer dans un lien ou un QR code)
+async function thumb(src, side, quality) {
+  const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; });
+  const k = Math.min(1, side / Math.max(img.naturalWidth, img.naturalHeight));
+  const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(img.naturalWidth * k)); c.height = Math.max(1, Math.round(img.naturalHeight * k));
+  c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+  let out = c.toDataURL('image/webp', quality);
+  if (!out.startsWith('data:image/webp')) out = c.toDataURL('image/jpeg', quality);
+  return out;
+}
+// Écran « photos » : prendre une ou plusieurs photos (ex. avant + arrière de l'étiquette, ou 2 captures d'écran)
+function multiPhoto({ title, hint, max = 4, go = 'Analyser' }) {
+  return new Promise(res => {
+    const shots = []; let done = false;
+    const el = sheet(`<h2>${esc(title)}</h2><p style="margin-top:0;color:var(--muted)">${esc(hint)}</p>
+      <div id="mp" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px"></div>
+      <div style="display:flex;gap:10px"><button class="big-btn sec" data-cam>${ICONS.camera} Photo</button><button class="big-btn sec" data-gal>Galerie</button></div>
+      <button class="big-btn" data-go style="margin-top:12px" disabled>${esc(go)}</button>`, () => { if (!done) res(null); });
+    const draw = () => {
+      el.querySelector('#mp').innerHTML = shots.map((s, i) => `<div style="position:relative;width:76px;height:76px;border-radius:12px;overflow:hidden;background:var(--surface2)"><img src="${s}" style="width:100%;height:100%;object-fit:cover"><span style="position:absolute;left:4px;top:4px;background:rgba(0,0,0,.6);color:#fff;font-size:.75rem;font-weight:700;border-radius:8px;padding:1px 6px">${i + 1}</span></div>`).join('') || '<span style="color:var(--muted)">Aucune photo pour l’instant</span>';
+      const g = el.querySelector('[data-go]'); g.disabled = !shots.length; g.style.opacity = shots.length ? 1 : .4;
+      el.querySelectorAll('[data-cam],[data-gal]').forEach(b => { b.disabled = shots.length >= max; b.style.opacity = shots.length >= max ? .4 : 1; });
+    };
+    const add = async (cap) => { const p = await pickImage(cap); if (p) { shots.push(p); draw(); } };
+    el.querySelector('[data-cam]').onclick = () => add(true);
+    el.querySelector('[data-gal]').onclick = () => add(false);
+    el.querySelector('[data-go]').onclick = () => { if (!shots.length) return; done = true; closeTop(); res(shots); };
+    draw();
+  });
+}
 function pickImage(capture) {
   return new Promise((res) => {
     const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*'; if (capture) inp.capture = 'environment';
@@ -253,7 +283,7 @@ async function askClaude({ system, content, useFetch = false }) {
   const fetchErr = (data.content || []).find(b => b.type === 'web_fetch_tool_result' && b.content?.type === 'web_fetch_tool_error');
   const text = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n');
   const a = text.indexOf('{'), z = text.lastIndexOf('}');
-  if (a < 0 || z < a) throw new Error(fetchErr ? 'Page inaccessible (' + fetchErr.content.error_code + '). Essayez « Coller le texte ».' : 'Réponse illisible, réessayez.');
+  if (a < 0 || z < a) throw new Error(fetchErr ? 'Ce site refuse la lecture automatique (' + fetchErr.content.error_code + ').' : 'Réponse illisible, réessayez.');
   const json = JSON.parse(text.slice(a, z + 1));
   if (json.error) throw new Error(json.error);
   return json;
@@ -296,21 +326,23 @@ async function unpackPayload(s) {
 }
 const appBase = () => location.href.split('#')[0].split('?')[0];
 
-function cardPayload(item, withAvis) {
+function cardPayload(item, withAvis, ph) {
   const by = Prefs.get('name') || 'Quelqu’un';
   if (item.kind === 'recipe') {
     const p = { v: 1, k: 'r', id: item.id, by, d: eff(item), src: item.sourceUrl || '' };
     if (item.current) p.mod = 1;
     if (withAvis && item.mine?.rating != null) p.av = { r: item.mine.rating, c: item.mine.comment || '' };
+    if (ph) p.ph = ph;
     return p;
   }
   const p = { v: 1, k: 'b', id: item.id, by, d: item.base };
   if (withAvis && item.mine?.rating != null) p.av = { r: item.mine.rating, c: item.mine.comment || '' };
+  if (ph) p.ph = ph;
   return p;
 }
 
 async function handleIncoming(p, photo) {
-  p = sanitizePayload(p); photo = safeImg(photo);
+  p = sanitizePayload(p); photo = safeImg(photo) || p?.ph || null;
   if (!p) { toast('Carte invalide'); return; }
   if (p.k === 'r') return incomingRecipe(p, photo);
   if (p.k === 'b') return incomingBottle(p, photo);
@@ -515,7 +547,7 @@ function renderSettings() {
       <div class="field"><label>Clé API Anthropic</label><input id="p-key" type="password" value="${esc(Prefs.get('apiKey'))}" placeholder="sk-ant-…" autocomplete="off"><div class="hint">Reste uniquement dans ce téléphone. Plafond conseillé : 5 € dans la console Anthropic.</div></div>
       <div class="field"><label>Modèle</label><input id="p-model" value="${esc(Prefs.get('model'))}"><div class="hint">Par défaut : claude-haiku-5-5 (le moins cher). Si l’import par lien échoue, essayez claude-sonnet-5-5.</div></div></div>
     <div class="box"><h3>Exemples</h3><button class="big-btn danger" id="del-demo">Supprimer les cartes d’exemple</button></div>
-    <p style="text-align:center;color:var(--muted);font-size:.8rem">Titi-Sti · v0.2 · données 100 % locales</p></div>`;
+    <p style="text-align:center;color:var(--muted);font-size:.8rem">Titi-Sti · v0.4 · données 100 % locales</p></div>`;
 }
 
 function bindMain() {
@@ -643,7 +675,7 @@ function editRecipe(r, draftNote) {
     ${draftNote ? `<div class="draft-note">${draftNote}</div>` : ''}
     ${!isNew && !r.current ? `<div class="draft-note">L’original sera conservé : vous pourrez toujours y revenir.</div>` : ''}
     <div class="field"><label>Photo</label><div class="photo-pick"><div class="ph" id="ph">${photo ? `<img src="${photo}">` : 'Aucune'}</div>
-      <div style="display:flex;flex-direction:column;gap:8px;flex:1"><button class="big-btn sec" data-pick style="padding:11px">Choisir / prendre</button>${photo ? '<button class="big-btn danger" data-nophoto style="padding:9px">Retirer</button>' : ''}</div></div></div>
+      <div style="display:flex;flex-direction:column;gap:8px;flex:1"><div style="display:flex;gap:8px"><button class="big-btn sec" data-cam style="padding:11px">${ICONS.camera} Photo</button><button class="big-btn sec" data-pick style="padding:11px">Galerie</button></div>${photo ? '<button class="big-btn danger" data-nophoto style="padding:9px">Retirer</button>' : ''}</div></div></div>
     <div class="field"><label>Titre</label><input id="f-title" value="${esc(d.title)}"></div>
     <div class="row2"><div class="field"><label>Catégorie</label><select id="f-cat">${Object.entries(RECIPE_CATS).map(([k, v]) => `<option value="${k}" ${d.category === k ? 'selected' : ''}>${v.label}</option>`).join('')}</select></div>
       <div class="field"><label>Difficulté</label><select id="f-diff">${DIFFS.map(x => `<option ${d.difficulty === x ? 'selected' : ''}>${x}</option>`).join('')}</select></div></div>
@@ -657,7 +689,8 @@ function editRecipe(r, draftNote) {
     <div class="field"><label>Lien d’origine</label><input id="f-src" value="${esc(r.sourceUrl || '')}" placeholder="https://…"></div>
     <button class="big-btn" data-save>Enregistrer</button></div>`);
   const setPhoto = (p) => { photo = p; el.querySelector('#ph').innerHTML = p ? `<img src="${p}">` : 'Aucune'; };
-  el.querySelector('[data-pick]').onclick = async () => { const p = await pickImage(); if (p) setPhoto(p); };
+  el.querySelector('[data-pick]').onclick = async () => { const p = await pickImage(false); if (p) setPhoto(p); };
+  el.querySelector('[data-cam]').onclick = async () => { const p = await pickImage(true); if (p) setPhoto(p); };
   const np = el.querySelector('[data-nophoto]'); if (np) np.onclick = () => { setPhoto(null); np.remove(); };
   el.querySelector('[data-save]').onclick = async () => {
     const v = (id) => el.querySelector(id).value;
@@ -732,8 +765,8 @@ function editBottle(b, draftNote) {
   const el = screen(isNew ? 'Nouvelle bouteille' : 'Modifier', `<div class="form">
     ${draftNote ? `<div class="draft-note">${draftNote}</div>` : ''}
     <div class="field"><label>Photo</label><div class="photo-pick"><div class="ph" id="ph">${photo ? `<img src="${photo}">` : 'Aucune'}</div>
-      <div style="display:flex;flex-direction:column;gap:8px;flex:1"><button class="big-btn sec" data-pick style="padding:11px">Choisir / prendre</button>
-      <button class="big-btn sec" data-ai style="padding:11px">✨ Remplir depuis l’étiquette</button></div></div></div>
+      <div style="display:flex;flex-direction:column;gap:8px;flex:1"><div style="display:flex;gap:8px"><button class="big-btn sec" data-cam style="padding:11px">${ICONS.camera} Photo</button><button class="big-btn sec" data-pick style="padding:11px">Galerie</button></div>
+      <button class="big-btn sec" data-ai style="padding:11px">✨ Remplir depuis l’étiquette</button></div></div><div class="hint">La photo de la carte est indépendante des photos d’étiquette analysées par Claude.</div></div>
     <div class="field"><label>Nom</label><input id="b-name" value="${esc(d.name)}"></div>
     <div class="row2"><div class="field"><label>Catégorie</label><select id="b-cat">${Object.entries(BAR_CATS).map(([k, v]) => `<option value="${k}" ${d.category === k ? 'selected' : ''}>${v.label}</option>`).join('')}</select></div>
       <div class="field"><label>Degré (%)</label><input id="b-abv" type="number" step="0.1" inputmode="decimal" value="${d.abv ?? ''}"></div></div>
@@ -750,10 +783,12 @@ function editBottle(b, draftNote) {
   };
   drawExtra(); el.querySelector('#b-cat').onchange = drawExtra;
   const setPhoto = (p) => { photo = p; el.querySelector('#ph').innerHTML = p ? `<img src="${p}">` : 'Aucune'; };
-  el.querySelector('[data-pick]').onclick = async () => { const p = await pickImage(); if (p) setPhoto(p); };
+  el.querySelector('[data-pick]').onclick = async () => { const p = await pickImage(false); if (p) setPhoto(p); };
+  el.querySelector('[data-cam]').onclick = async () => { const p = await pickImage(true); if (p) setPhoto(p); };
   el.querySelector('[data-ai]').onclick = async () => {
-    const p = photo || await pickImage(true); if (!p) return; setPhoto(p);
-    const j = await withLoading('Lecture de l’étiquette…', () => askClaude({ system: SYS_BOTTLE, content: [imgBlock(p), { type: 'text', text: 'Identifie cette bouteille.' }] }));
+    const shots = await scanLabels(); if (!shots) return;
+    if (!photo) setPhoto(shots[0]);
+    const j = await withLoading('Lecture de l’étiquette…', () => askBottle(shots));
     if (!j) return;
     const nb = cleanBottle(j);
     const set = (id, v) => { if (v != null && v !== '') el.querySelector(id).value = v; };
@@ -794,21 +829,30 @@ async function shareCard(item) {
     <div class="flip-hint">Touchez la carte pour la retourner</div>
     ${item.mine?.rating != null ? `<label class="check"><input type="checkbox" id="withav" checked> Joindre mon avis (${fmtNote(item.mine.rating)}/10)</label>` : ''}
     <div style="display:flex;flex-direction:column;gap:10px">
-      <button class="big-btn" data-link>${ICONS.share} Envoyer le lien (WhatsApp…)</button>
-      <button class="big-btn sec" data-file>${ICONS.file} Envoyer en fichier (avec photo)</button></div>`);
+      <button class="big-btn" data-link>${ICONS.share} Envoyer le lien, photo comprise (WhatsApp…)</button>
+      <button class="big-btn sec" data-file>${ICONS.file} Envoyer en fichier (photo pleine qualité)</button></div>`);
   const flip = el.querySelector('#flip'); flip.onclick = () => flip.classList.toggle('back');
   let url = '';
+  // Photo moyenne pour le lien (~20 Ko), miniature pour le QR code si elle tient.
+  let linkPh = null; const qrThumbs = [];
+  if (item.photo) {
+    try { linkPh = await thumb(item.photo, 480, .6); } catch { }
+    for (const [side, q] of [[48, .45], [36, .4], [28, .35]]) { try { qrThumbs.push(await thumb(item.photo, side, q)); } catch { } }
+  }
   const build = async () => {
     const withAv = el.querySelector('#withav')?.checked;
-    url = appBase() + '#c=' + await packPayload(cardPayload(item, withAv));
+    url = appBase() + '#c=' + await packPayload(cardPayload(item, withAv, linkPh));
     const z = el.querySelector('#qrzone');
-    if (url.length > QR_MAX || typeof qrcode === 'undefined') {
-      z.innerHTML = `<b>Trop long pour un QR code</b><div class="card-meta" style="justify-content:center">Utilisez « Envoyer en fichier » ou le lien.</div>`;
+    let qrUrl = null, withThumb = false;
+    for (const t of qrThumbs) { const u = appBase() + '#c=' + await packPayload(cardPayload(item, withAv, t)); if (u.length <= QR_MAX) { qrUrl = u; withThumb = true; break; } }
+    if (!qrUrl) { const u = appBase() + '#c=' + await packPayload(cardPayload(item, withAv)); if (u.length <= QR_MAX) qrUrl = u; }
+    if (!qrUrl || typeof qrcode === 'undefined') {
+      z.innerHTML = `<b>Trop long pour un QR code</b><div class="card-meta" style="justify-content:center">Utilisez « Envoyer le lien » : photo comprise.</div>`;
       return;
     }
     try {
-      const qr = qrcode(0, 'L'); qr.addData(url, 'Byte'); qr.make();
-      z.innerHTML = `<div class="qr">${qr.createSvgTag({ cellSize: 4, margin: 2, scalable: true })}</div><div class="card-meta" style="justify-content:center">Scannez avec l’appareil photo</div>`;
+      const qr = qrcode(0, 'L'); qr.addData(qrUrl, 'Byte'); qr.make();
+      z.innerHTML = `<div class="qr">${qr.createSvgTag({ cellSize: 4, margin: 2, scalable: true })}</div><div class="card-meta" style="justify-content:center;text-align:center">${item.photo ? (withThumb ? 'Photo en miniature. Pour la photo nette : « Envoyer le lien ».' : 'Sans photo. Pour la photo : « Envoyer le lien ».') : 'Scannez avec l’appareil photo'}</div>`;
     } catch { z.innerHTML = '<b>Trop long pour un QR code</b>'; }
   };
   await build();
@@ -860,34 +904,39 @@ function importFile() {
 /* =====================================================================
    Bouton + : ajouter / importer
    ===================================================================== */
+const scanLabels = () => multiPhoto({ title: 'Photos de l’étiquette', hint: 'Commencez par la face avant (bouteille entière) : elle servira de photo de carte. Ajoutez ensuite l’étiquette arrière pour la description.', max: 3 });
+const askBottle = (shots) => askClaude({ system: SYS_BOTTLE, content: [...shots.map(imgBlock), { type: 'text', text: shots.length > 1 ? 'Ces photos montrent la même bouteille (face avant, puis arrière). Identifie-la.' : 'Identifie cette bouteille.' }] });
+const askRecipePhotos = (shots) => askClaude({ system: SYS_RECIPE, content: [...shots.map(imgBlock), { type: 'text', text: shots.length > 1 ? 'Ces images sont les pages successives d’une même recette. Extrais la recette complète.' : 'Extrais la recette de cette image.' }] });
+async function importRecipePhotos(sourceUrl) {
+  const shots = await multiPhoto({ title: 'Photos de la recette', hint: 'Fiche manuscrite, livre ou captures d’écran. Une recette longue ? Prenez plusieurs captures, dans l’ordre.', max: 4 });
+  if (!shots) return;
+  const j = await withLoading('Lecture des photos…', () => askRecipePhotos(shots));
+  if (j) editRecipe({ base: cleanRecipe(j), current: null, sourceUrl: sourceUrl || '' }, '✨ Brouillon rempli par Claude : vérifiez, ajoutez une photo du plat, puis enregistrez.');
+}
 function addMenu() {
   if (S.tab === 'bar') {
     const el = sheet(`<h2>Ajouter une bouteille</h2>
-      <button class="menu-item" data-a="label">${ICONS.camera}<span>Photo de l’étiquette<small>Claude remplit la fiche pour vous</small></span></button>
+      <button class="menu-item" data-a="label">${ICONS.camera}<span>Photos de l’étiquette<small>Avant (+ arrière) : Claude remplit la fiche</small></span></button>
       <button class="menu-item" data-a="manual">${ICONS.pen}<span>Saisie manuelle</span></button>
       <button class="menu-item" data-a="file">${ICONS.file}<span>Carte reçue en fichier</span></button>`);
     el.querySelector('[data-a=label]').onclick = async () => {
-      closeTop(); const p = await pickImage(true); if (!p) return;
-      const j = await withLoading('Lecture de l’étiquette…', () => askClaude({ system: SYS_BOTTLE, content: [imgBlock(p), { type: 'text', text: 'Identifie cette bouteille.' }] }));
-      if (j) editBottle({ base: cleanBottle(j), photo: p }, '✨ Brouillon rempli par Claude : vérifiez avant d’enregistrer.');
+      closeTop(); const shots = await scanLabels(); if (!shots) return;
+      const j = await withLoading('Lecture de l’étiquette…', () => askBottle(shots));
+      if (j) editBottle({ base: cleanBottle(j), photo: shots[0] }, '✨ Brouillon rempli par Claude : vérifiez avant d’enregistrer. La photo n°1 sert de photo de carte (modifiable).');
     };
     el.querySelector('[data-a=manual]').onclick = () => { closeTop(); editBottle({}); };
     el.querySelector('[data-a=file]').onclick = () => { closeTop(); importFile(); };
     return;
   }
   const el = sheet(`<h2>Ajouter une recette</h2>
-    <button class="menu-item" data-a="url">${ICONS.link}<span>Depuis un lien<small>Astuce : sur Marmiton, Partager → cette appli</small></span></button>
+    <button class="menu-item" data-a="url">${ICONS.link}<span>Depuis un lien<small>Astuce : sur la page, Partager → Titi-Sti</small></span></button>
     <button class="menu-item" data-a="text">${ICONS.text}<span>Coller un texte<small>Message, note, page copiée</small></span></button>
-    <button class="menu-item" data-a="photo">${ICONS.camera}<span>Photo<small>Fiche manuscrite, livre, capture</small></span></button>
+    <button class="menu-item" data-a="photo">${ICONS.camera}<span>Photos / captures d’écran<small>Fiche manuscrite, livre, site qui bloque l’import</small></span></button>
     <button class="menu-item" data-a="manual">${ICONS.pen}<span>Saisie manuelle</span></button>
     <button class="menu-item" data-a="file">${ICONS.file}<span>Carte reçue en fichier</span></button>`);
   el.querySelector('[data-a=url]').onclick = () => { closeTop(); importUrl(); };
   el.querySelector('[data-a=text]').onclick = () => { closeTop(); importText(); };
-  el.querySelector('[data-a=photo]').onclick = async () => {
-    closeTop(); const p = await pickImage(true); if (!p) return;
-    const j = await withLoading('Lecture de la photo…', () => askClaude({ system: SYS_RECIPE, content: [imgBlock(p), { type: 'text', text: 'Extrais la recette de cette image.' }] }));
-    if (j) editRecipe({ base: cleanRecipe(j), current: null }, '✨ Brouillon rempli par Claude : vérifiez avant d’enregistrer.');
-  };
+  el.querySelector('[data-a=photo]').onclick = () => { closeTop(); importRecipePhotos(); };
   el.querySelector('[data-a=manual]').onclick = () => { closeTop(); editRecipe({ base: cleanRecipe({ title: '' }), current: null }); };
   el.querySelector('[data-a=file]').onclick = () => { closeTop(); importFile(); };
 }
@@ -905,7 +954,8 @@ function importUrl(prefill = '') {
 async function runUrlImport(url) {
   const dup = recipes().find(r => r.sourceUrl === url);
   if (dup && !await confirmSheet('Vous avez déjà importé cette recette (« ' + eff(dup).title + ' »). Importer quand même ?', 'Importer', false)) return;
-  const j = await withLoading('Claude lit la recette…', () => askClaude({ system: SYS_RECIPE, useFetch: true, content: `Récupère cette page avec l'outil web_fetch, puis extrais la recette : ${url}` }));
+  const j = await withLoading('Claude lit la recette…', () => askClaude({ system: SYS_RECIPE, useFetch: true, content: `Récupère cette page avec l'outil web_fetch, puis extrais la recette : ${url}` }),
+    { label: 'Importer par captures d’écran', hint: 'Certains sites (Marmiton…) bloquent la lecture automatique. Faites des captures d’écran de la recette : Claude les lira.', run: () => importRecipePhotos(url) });
   if (j) { const r = { base: cleanRecipe(j), current: null, sourceUrl: url }; editRecipe(r, '✨ Brouillon rempli par Claude : vérifiez, ajoutez une photo, puis enregistrez.'); }
 }
 function importText(prefill = '') {
@@ -919,13 +969,16 @@ function importText(prefill = '') {
     if (j) editRecipe({ base: cleanRecipe(j), current: null }, '✨ Brouillon rempli par Claude : vérifiez avant d’enregistrer.');
   };
 }
-async function withLoading(msg, fn) {
+async function withLoading(msg, fn, fallback) {
   const el = sheet(`<div class="loading"><div class="spinner"></div><b>${esc(msg)}</b><span style="color:var(--muted);font-size:.9rem">Quelques secondes…</span></div>`);
   try { const r = await fn(); if (stack.at(-1)?.el === el) closeTop(); return r; }
   catch (e) {
     if (stack.at(-1)?.el === el) closeTop();
     if (e.message === 'NOKEY') {
       if (await confirmSheet('Ajoutez d’abord votre clé API Claude dans Réglages.', 'Aller aux réglages', false)) { closeAll(); S.tab = 'settings'; render(); }
+    } else if (fallback) {
+      const a = await previewSheet({ title: 'Import impossible', body: `<p>${esc(e.message)}</p><p>${esc(fallback.hint)}</p>`, actions: [['fb', fallback.label], ['ok', 'Annuler', 'sec']] });
+      if (a === 'fb') fallback.run();
     } else previewSheet({ title: 'Import impossible', body: `<p>${esc(e.message)}</p>`, actions: [['ok', 'OK', 'sec']] });
     return null;
   }

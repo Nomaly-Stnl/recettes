@@ -1,5 +1,5 @@
 // Service worker : met l'appli en cache pour qu'elle marche hors connexion.
-const CACHE = 'titi-sti-v2';
+const CACHE = 'titi-sti-v4';
 const FILES = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {

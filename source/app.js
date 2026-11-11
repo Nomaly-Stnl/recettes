@@ -190,16 +190,6 @@ async function compressImage(src, maxSide = 1200, target = 220_000) {
   while (out.length * .75 > target && q > .4) { q -= .1; out = c.toDataURL('image/jpeg', q); }
   return out;
 }
-// Petite version d'une photo (pour l'embarquer dans un lien ou un QR code)
-async function thumb(src, side, quality) {
-  const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; });
-  const k = Math.min(1, side / Math.max(img.naturalWidth, img.naturalHeight));
-  const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(img.naturalWidth * k)); c.height = Math.max(1, Math.round(img.naturalHeight * k));
-  c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-  let out = c.toDataURL('image/webp', quality);
-  if (!out.startsWith('data:image/webp')) out = c.toDataURL('image/jpeg', quality);
-  return out;
-}
 // Écran « photos » : prendre une ou plusieurs photos (ex. avant + arrière de l'étiquette, ou 2 captures d'écran)
 function multiPhoto({ title, hint, max = 4, go = 'Analyser' }) {
   return new Promise(res => {
@@ -547,7 +537,7 @@ function renderSettings() {
       <div class="field"><label>Clé API Anthropic</label><input id="p-key" type="password" value="${esc(Prefs.get('apiKey'))}" placeholder="sk-ant-…" autocomplete="off"><div class="hint">Reste uniquement dans ce téléphone. Plafond conseillé : 5 € dans la console Anthropic.</div></div>
       <div class="field"><label>Modèle</label><input id="p-model" value="${esc(Prefs.get('model'))}"><div class="hint">Par défaut : claude-haiku-5-5 (le moins cher). Si l’import par lien échoue, essayez claude-sonnet-5-5.</div></div></div>
     <div class="box"><h3>Exemples</h3><button class="big-btn danger" id="del-demo">Supprimer les cartes d’exemple</button></div>
-    <p style="text-align:center;color:var(--muted);font-size:.8rem">Titi-Sti · v0.4 · données 100 % locales</p></div>`;
+    <p style="text-align:center;color:var(--muted);font-size:.8rem">Titi-Sti · v0.5 · données 100 % locales</p></div>`;
 }
 
 function bindMain() {
@@ -819,6 +809,115 @@ function cardFace(item) {
   const d = item.base, c = BAR_CATS[d.category] || BAR_CATS.autre, r = rarity(item.mine?.rating);
   return { color: c.color, rk: r ? 'r-' + r.k : '', photo: item.photo, letter: d.name[0], title: d.name, meta: [c.label, d.brand, item.mine?.rating != null ? fmtNote(item.mine.rating) + '/10' : '', r?.label].filter(Boolean) };
 }
+/* ---------- Carte-image : l'image de la carte contient la photo ET un QR code avec les données ----------
+   On la partage comme une photo (WhatsApp, mail…). Le destinataire la partage vers Titi-Sti (ou la
+   choisit dans sa galerie) : l'appli lit le QR code dans l'image et récupère la photo en la découpant. */
+const CARD_W = 1200, CARD_H = 1600, PHOTO_BOX = { x: 60, y: 60, w: 1080, h: 560 };
+const B45 = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ $%*+-./:';
+function b45enc(bytes) {
+  let out = '';
+  for (let i = 0; i < bytes.length; i += 2) {
+    if (i + 1 < bytes.length) { let x = bytes[i] * 256 + bytes[i + 1]; const a = x % 45; x = (x - a) / 45; const b = x % 45; out += B45[a] + B45[b] + B45[(x - b) / 45]; }
+    else { const x = bytes[i]; out += B45[x % 45] + B45[Math.floor(x / 45)]; }
+  }
+  return out;
+}
+function b45dec(s) {
+  const v = [...s].map(ch => { const i = B45.indexOf(ch); if (i < 0) throw new Error('b45'); return i; });
+  const out = [];
+  for (let i = 0; i < v.length; i += 3) {
+    if (i + 2 < v.length) { const x = v[i] + v[i + 1] * 45 + v[i + 2] * 2025; out.push(x >> 8, x & 255); }
+    else out.push(v[i] + v[i + 1] * 45);
+  }
+  return new Uint8Array(out);
+}
+async function deflateObj(o) { return pipe(new TextEncoder().encode(JSON.stringify(o)), new CompressionStream('deflate-raw')); }
+async function inflateObj(b) { return JSON.parse(new TextDecoder().decode(await pipe(b, new DecompressionStream('deflate-raw')))); }
+const loadImg = (src) => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; });
+function rr(g, x, y, w, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
+function fitText(g, text, maxW, size, weight) {
+  let s = size; g.font = `${weight} ${s}px system-ui, -apple-system, Roboto, sans-serif`;
+  while (g.measureText(text).width > maxW && s > size * .6) { s -= 2; g.font = `${weight} ${s}px system-ui, -apple-system, Roboto, sans-serif`; }
+  let t = text; while (g.measureText(t).width > maxW && t.length > 3) t = t.slice(0, -2);
+  return t === text ? t : t.trim() + '…';
+}
+// Renvoie un Blob JPEG de la carte, ou null si les données ne tiennent pas dans un QR code.
+async function cardImage(item, withAvis) {
+  const f = cardFace(item);
+  const g0 = document.createElement('canvas').getContext('2d');
+  // Zone où la photo est dessinée (en entier, sans rognage) : transmise pour que le destinataire la découpe.
+  let img = null, rect = null;
+  if (item.photo) {
+    img = await loadImg(item.photo);
+    const k = Math.min(PHOTO_BOX.w / img.naturalWidth, PHOTO_BOX.h / img.naturalHeight);
+    const w = Math.round(img.naturalWidth * k), h = Math.round(img.naturalHeight * k);
+    rect = [PHOTO_BOX.x + Math.round((PHOTO_BOX.w - w) / 2), PHOTO_BOX.y + Math.round((PHOTO_BOX.h - h) / 2), w, h];
+  }
+  const p = cardPayload(item, withAvis); if (rect) p.hp = rect;
+  const data = 'TS1:' + b45enc(await deflateObj(p));
+  let qr; try { qr = qrcode(0, 'L'); qr.addData(data, 'Alphanumeric'); qr.make(); } catch { return null; }
+  const c = document.createElement('canvas'); c.width = CARD_W; c.height = CARD_H; const g = c.getContext('2d');
+  // Cadre (couleur de catégorie, ou or pour une carte légendaire)
+  if (f.rk === 'r-legendaire') { const gr = g.createLinearGradient(0, 0, CARD_W, CARD_H); gr.addColorStop(0, '#f6d365'); gr.addColorStop(.5, '#d4a017'); gr.addColorStop(1, '#fff1b8'); g.fillStyle = gr; }
+  else g.fillStyle = f.color;
+  g.fillRect(0, 0, CARD_W, CARD_H);
+  g.fillStyle = '#fffdf8'; rr(g, 30, 30, CARD_W - 60, CARD_H - 60, 36); g.fill();
+  // Photo : fond flouté + photo entière par-dessus
+  g.save(); rr(g, PHOTO_BOX.x, PHOTO_BOX.y, PHOTO_BOX.w, PHOTO_BOX.h, 24); g.clip();
+  if (img) {
+    const k = Math.max(PHOTO_BOX.w / img.naturalWidth, PHOTO_BOX.h / img.naturalHeight);
+    g.filter = 'blur(28px) brightness(.85)';
+    g.drawImage(img, PHOTO_BOX.x + (PHOTO_BOX.w - img.naturalWidth * k) / 2, PHOTO_BOX.y + (PHOTO_BOX.h - img.naturalHeight * k) / 2, img.naturalWidth * k, img.naturalHeight * k);
+    g.filter = 'none';
+    g.drawImage(img, rect[0], rect[1], rect[2], rect[3]);
+  } else {
+    const gr = g.createLinearGradient(PHOTO_BOX.x, PHOTO_BOX.y, PHOTO_BOX.x + PHOTO_BOX.w, PHOTO_BOX.y + PHOTO_BOX.h);
+    gr.addColorStop(0, f.color); gr.addColorStop(1, '#222'); g.fillStyle = gr; g.fillRect(PHOTO_BOX.x, PHOTO_BOX.y, PHOTO_BOX.w, PHOTO_BOX.h);
+    g.fillStyle = '#fff'; g.font = '800 220px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText((f.letter || '?').toUpperCase(), CARD_W / 2, PHOTO_BOX.y + PHOTO_BOX.h / 2); g.textAlign = 'left'; g.textBaseline = 'alphabetic';
+  }
+  g.restore();
+  // Titre + infos
+  g.fillStyle = '#1d1d1f'; const t = fitText(g, f.title, CARD_W - 140, 60, 750); g.fillText(t, 70, 700);
+  g.fillStyle = '#6b6b70'; const m = fitText(g, f.meta.join('  ·  '), CARD_W - 140, 34, 500); g.fillText(m, 70, 752);
+  // QR code
+  const n = qr.getModuleCount(), quiet = 4, avail = 770, mod = Math.max(2, Math.floor(avail / (n + quiet * 2))), qs = mod * (n + quiet * 2);
+  const qx = Math.round((CARD_W - qs) / 2), qy = 780 + Math.round((avail - qs) / 2);
+  g.fillStyle = '#fff'; g.fillRect(qx, qy, qs, qs); g.fillStyle = '#000';
+  for (let r = 0; r < n; r++) for (let col = 0; col < n; col++) if (qr.isDark(r, col)) g.fillRect(qx + (col + quiet) * mod, qy + (r + quiet) * mod, mod, mod);
+  g.fillStyle = '#8a8a90'; g.font = '500 26px system-ui, sans-serif'; g.textAlign = 'center';
+  g.fillText('Titi-Sti · partagez cette image vers Titi-Sti pour l’ajouter', CARD_W / 2, CARD_H - 52);
+  return new Promise(res => c.toBlob(b => res(b), 'image/jpeg', .9));
+}
+// Lit une carte-image (reçue par WhatsApp, galerie…). Renvoie { p, photo } ou null si ce n'est pas une carte.
+async function readCardImage(blob) {
+  const bmp = await createImageBitmap(blob);
+  let text = null;
+  if ('BarcodeDetector' in window) {
+    try { const hits = await new BarcodeDetector({ formats: ['qr_code'] }).detect(bmp); text = hits.map(h => h.rawValue).find(v => v && v.startsWith('TS1:')) || null; } catch { }
+  }
+  if (!text && typeof jsQR !== 'undefined') {
+    const k = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
+    const c = document.createElement('canvas'); c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
+    const g = c.getContext('2d'); g.drawImage(bmp, 0, 0, c.width, c.height);
+    const r = jsQR(g.getImageData(0, 0, c.width, c.height).data, c.width, c.height, { inversionAttempts: 'attemptBoth' });
+    if (r && r.data && r.data.startsWith('TS1:')) text = r.data;
+  }
+  if (!text) return null;
+  const p = await inflateObj(b45dec(text.slice(4)));
+  let photo = null;
+  if (Array.isArray(p.hp) && p.hp.length === 4) {
+    const k = bmp.width / CARD_W, [x, y, w, h] = p.hp.map(Number);
+    if ([x, y, w, h].every(Number.isFinite) && w > 10 && h > 10) {
+      const c = document.createElement('canvas'); c.width = Math.round(w * k); c.height = Math.round(h * k);
+      c.getContext('2d').drawImage(bmp, x * k, y * k, w * k, h * k, 0, 0, c.width, c.height);
+      photo = await compressImage(c.toDataURL('image/jpeg', .92));
+    }
+  }
+  delete p.hp;
+  return { p, photo };
+}
+
 async function shareCard(item) {
   const f = cardFace(item);
   const el = sheet(`<h2>Partager la carte</h2>
@@ -826,47 +925,45 @@ async function shareCard(item) {
       <div class="face ${f.rk}"><div class="face-in"><div class="fp">${f.photo ? `<img src="${f.photo}">` : esc(f.letter || '?')}</div>
         <div class="ft"><h3>${esc(f.title)}</h3><div class="card-meta">${f.meta.map(esc).join(' · ')}</div></div></div></div>
       <div class="face backface ${f.rk}"><div class="face-in" id="qrzone"><div class="spinner"></div></div></div></div></div>
-    <div class="flip-hint">Touchez la carte pour la retourner</div>
+    <div class="flip-hint">Touchez la carte : QR code pour un échange en direct</div>
     ${item.mine?.rating != null ? `<label class="check"><input type="checkbox" id="withav" checked> Joindre mon avis (${fmtNote(item.mine.rating)}/10)</label>` : ''}
     <div style="display:flex;flex-direction:column;gap:10px">
-      <button class="big-btn" data-link>${ICONS.share} Envoyer le lien, photo comprise (WhatsApp…)</button>
-      <button class="big-btn sec" data-file>${ICONS.file} Envoyer en fichier (photo pleine qualité)</button></div>`);
+      <button class="big-btn" data-img disabled style="opacity:.5">${ICONS.share} Partager (WhatsApp, mail…)</button>
+      <div id="imgnote" style="font-size:.85rem;color:var(--muted);text-align:center">Préparation de la carte…</div></div>`);
   const flip = el.querySelector('#flip'); flip.onclick = () => flip.classList.toggle('back');
-  let url = '';
-  // Photo moyenne pour le lien (~20 Ko), miniature pour le QR code si elle tient.
-  let linkPh = null; const qrThumbs = [];
-  if (item.photo) {
-    try { linkPh = await thumb(item.photo, 480, .6); } catch { }
-    for (const [side, q] of [[48, .45], [36, .4], [28, .35]]) { try { qrThumbs.push(await thumb(item.photo, side, q)); } catch { } }
-  }
+  let file = null, isImage = false;
+  const btn = el.querySelector('[data-img]'), note = el.querySelector('#imgnote');
   const build = async () => {
+    btn.disabled = true; btn.style.opacity = .5;
     const withAv = el.querySelector('#withav')?.checked;
-    url = appBase() + '#c=' + await packPayload(cardPayload(item, withAv, linkPh));
+    // 1) QR « en direct » (lien à scanner avec l'appareil photo, sans photo)
+    const url = appBase() + '#c=' + await packPayload(cardPayload(item, withAv));
     const z = el.querySelector('#qrzone');
-    let qrUrl = null, withThumb = false;
-    for (const t of qrThumbs) { const u = appBase() + '#c=' + await packPayload(cardPayload(item, withAv, t)); if (u.length <= QR_MAX) { qrUrl = u; withThumb = true; break; } }
-    if (!qrUrl) { const u = appBase() + '#c=' + await packPayload(cardPayload(item, withAv)); if (u.length <= QR_MAX) qrUrl = u; }
-    if (!qrUrl || typeof qrcode === 'undefined') {
-      z.innerHTML = `<b>Trop long pour un QR code</b><div class="card-meta" style="justify-content:center">Utilisez « Envoyer le lien » : photo comprise.</div>`;
-      return;
+    if (url.length <= QR_MAX && typeof qrcode !== 'undefined') {
+      try { const qr = qrcode(0, 'L'); qr.addData(url, 'Byte'); qr.make(); z.innerHTML = `<div class="qr">${qr.createSvgTag({ cellSize: 4, margin: 2, scalable: true })}</div><div class="card-meta" style="justify-content:center;text-align:center">À scanner avec l’appareil photo de l’autre téléphone (sans photo)</div>`; }
+      catch { z.innerHTML = '<b>Trop long pour un QR code en direct</b><div class="card-meta" style="justify-content:center">Utilisez « Partager ».</div>'; }
+    } else z.innerHTML = '<b>Trop long pour un QR code en direct</b><div class="card-meta" style="justify-content:center">Utilisez « Partager ».</div>';
+    // 2) Carte-image avec photo (ou fichier si la recette est trop longue)
+    const slug = norm(f.title).replace(/ /g, '-').slice(0, 40) || 'carte';
+    let blob = null; try { blob = await cardImage(item, withAv); } catch (e) { console.error(e); }
+    if (blob) { file = new File([blob], `titi-sti-${slug}.jpg`, { type: 'image/jpeg' }); isImage = true; note.textContent = 'Envoie une image de la carte, photo comprise. Le destinataire la partage vers Titi-Sti pour l’ajouter.'; }
+    else {
+      const data = { app: APP_ID, type: 'carte', payload: cardPayload(item, withAv), photo: item.photo || null };
+      file = new File([JSON.stringify(data)], `${slug}.carte.json`, { type: 'application/json' }); isImage = false;
+      note.textContent = 'Recette très longue : envoyée en fichier (photo comprise).';
     }
-    try {
-      const qr = qrcode(0, 'L'); qr.addData(qrUrl, 'Byte'); qr.make();
-      z.innerHTML = `<div class="qr">${qr.createSvgTag({ cellSize: 4, margin: 2, scalable: true })}</div><div class="card-meta" style="justify-content:center;text-align:center">${item.photo ? (withThumb ? 'Photo en miniature. Pour la photo nette : « Envoyer le lien ».' : 'Sans photo. Pour la photo : « Envoyer le lien ».') : 'Scannez avec l’appareil photo'}</div>`;
-    } catch { z.innerHTML = '<b>Trop long pour un QR code</b>'; }
+    btn.disabled = false; btn.style.opacity = 1;
   };
   await build();
   const av = el.querySelector('#withav'); if (av) av.onchange = build;
-  el.querySelector('[data-link]').onclick = async () => {
-    const text = `${f.title} — carte partagée par ${Prefs.get('name') || 'moi'}`;
-    try { if (navigator.share) { await navigator.share({ title: f.title, text, url }); return; } } catch (e) { if (e.name === 'AbortError') return; }
-    try { await navigator.clipboard.writeText(url); toast('Lien copié'); } catch { prompt('Copiez ce lien :', url); }
-  };
-  el.querySelector('[data-file]').onclick = async () => {
-    const withAv = el.querySelector('#withav')?.checked;
-    const data = { app: APP_ID, type: 'carte', payload: cardPayload(item, withAv), photo: item.photo || null };
-    const name = norm(f.title).replace(/ /g, '-').slice(0, 40) + '.carte.json';
-    await shareOrDownload(new File([JSON.stringify(data)], name, { type: 'application/json' }), f.title);
+  btn.onclick = async () => {
+    if (!file) return;
+    const text = isImage ? `${f.title} — carte Titi-Sti de ${Prefs.get('name') || 'moi'}. Pour l’ajouter : ouvre l’image → Partager → Titi-Sti.` : '';
+    try {
+      if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: f.title, text }); return; }
+    } catch (e) { if (e.name === 'AbortError') return; console.warn(e); }
+    const a = document.createElement('a'); a.href = URL.createObjectURL(file); a.download = file.name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000); toast('Carte enregistrée dans Téléchargements');
   };
 }
 async function shareOrDownload(file, title) {
@@ -883,11 +980,34 @@ async function exportAll() {
   const ok = await shareOrDownload(new File([JSON.stringify(data)], `sauvegarde-titi-sti-${today()}.json`, { type: 'application/json' }), 'Sauvegarde Titi-Sti');
   if (ok) { Prefs.set('lastBackup', Date.now()); render(); }
 }
+// Reçoit une image ou un fichier (sélectionné, ou partagé vers Titi-Sti depuis WhatsApp…)
+async function receiveBlob(blob) {
+  const type = blob.type || '', name = blob.name || '';
+  if (type.startsWith('image/')) {
+    let res = null;
+    try { res = await withLoading('Lecture de la carte…', () => readCardImage(blob)); } catch { }
+    if (res && res.p) return handleIncoming(res.p, res.photo);
+    // Pas une carte Titi-Sti : on propose de l'analyser avec Claude
+    const dataUrl = await compressImage(await fileToDataURL(blob));
+    const a = await previewSheet({ title: 'Image reçue', body: '<p>Ce n’est pas une carte Titi-Sti. Que voulez-vous en faire ?</p>',
+      actions: [['r', 'Importer comme recette (Claude)'], ['b', 'Importer comme bouteille (Claude)'], ['no', 'Annuler', 'sec']] });
+    if (a === 'r') { const j = await withLoading('Lecture de l’image…', () => askRecipePhotos([dataUrl])); if (j) editRecipe({ base: cleanRecipe(j), current: null }, '✨ Brouillon rempli par Claude : vérifiez avant d’enregistrer.'); }
+    if (a === 'b') { const j = await withLoading('Lecture de l’étiquette…', () => askBottle([dataUrl])); if (j) editBottle({ base: cleanBottle(j), photo: dataUrl }, '✨ Brouillon rempli par Claude : vérifiez avant d’enregistrer.'); }
+    return;
+  }
+  if (type.includes('json') || name.endsWith('.json') || !type) {
+    let data; try { data = JSON.parse(await blob.text()); } catch { return toast('Fichier illisible'); }
+    return receiveData(data);
+  }
+  toast('Type de fichier non reconnu');
+}
 function importFile() {
-  const inp = document.createElement('input'); inp.type = 'file'; inp.accept = '.json,application/json';
-  inp.onchange = async () => {
-    const f = inp.files[0]; if (!f) return;
-    let data; try { data = JSON.parse(await f.text()); } catch { return toast('Fichier illisible'); }
+  const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*,.json,application/json';
+  inp.onchange = async () => { const f = inp.files[0]; if (f) await receiveBlob(f); };
+  inp.click();
+}
+async function receiveData(data) {
+  {
     if (data.app !== APP_ID) return toast('Ce fichier ne vient pas de l’appli');
     if (data.type === 'carte') return handleIncoming(data.payload, data.photo);
     if (data.type === 'sauvegarde') {
@@ -897,8 +1017,7 @@ function importFile() {
       for (const raw of items) { const it = sanitizeItem(raw); if (!it) continue; const cur = byId(it.id); if (!cur || (it.updatedAt || 0) > (cur.updatedAt || 0)) { const keep = it.updatedAt; await Store.put(it); n++; } }
       S.items = await Store.all(); render(); toast(n + ' carte(s) importée(s)');
     }
-  };
-  inp.click();
+  }
 }
 
 /* =====================================================================
@@ -918,7 +1037,7 @@ function addMenu() {
     const el = sheet(`<h2>Ajouter une bouteille</h2>
       <button class="menu-item" data-a="label">${ICONS.camera}<span>Photos de l’étiquette<small>Avant (+ arrière) : Claude remplit la fiche</small></span></button>
       <button class="menu-item" data-a="manual">${ICONS.pen}<span>Saisie manuelle</span></button>
-      <button class="menu-item" data-a="file">${ICONS.file}<span>Carte reçue en fichier</span></button>`);
+      <button class="menu-item" data-a="file">${ICONS.file}<span>Carte reçue<small>Image de carte (galerie) ou fichier</small></span></button>`);
     el.querySelector('[data-a=label]').onclick = async () => {
       closeTop(); const shots = await scanLabels(); if (!shots) return;
       const j = await withLoading('Lecture de l’étiquette…', () => askBottle(shots));
@@ -933,7 +1052,7 @@ function addMenu() {
     <button class="menu-item" data-a="text">${ICONS.text}<span>Coller un texte<small>Message, note, page copiée</small></span></button>
     <button class="menu-item" data-a="photo">${ICONS.camera}<span>Photos / captures d’écran<small>Fiche manuscrite, livre, site qui bloque l’import</small></span></button>
     <button class="menu-item" data-a="manual">${ICONS.pen}<span>Saisie manuelle</span></button>
-    <button class="menu-item" data-a="file">${ICONS.file}<span>Carte reçue en fichier</span></button>`);
+    <button class="menu-item" data-a="file">${ICONS.file}<span>Carte reçue<small>Image de carte (galerie) ou fichier</small></span></button>`);
   el.querySelector('[data-a=url]').onclick = () => { closeTop(); importUrl(); };
   el.querySelector('[data-a=text]').onclick = () => { closeTop(); importText(); };
   el.querySelector('[data-a=photo]').onclick = () => { closeTop(); importRecipePhotos(); };
@@ -1021,8 +1140,25 @@ async function checkIncoming() {
     try { await handleIncoming(await unpackPayload(h.slice(3))); } catch (e) { console.error(e); toast('Carte illisible'); }
     return;
   }
-  // Partage Android (share_target) : ?url=…&text=…
   const sp = new URLSearchParams(location.search);
+  // Partage Android vers Titi-Sti (image, fichier, lien, texte) : déposé par le service worker
+  if (sp.has('inbox')) {
+    try { history.replaceState(null, '', appBase()); } catch { }
+    try {
+      const c = await caches.open('titi-inbox');
+      const mr = await c.match('inbox-meta'); const meta = mr ? await mr.json() : {};
+      const fr = meta.hasFile ? await c.match('inbox-file') : null;
+      const blob = fr ? new File([await fr.blob()], meta.name || 'partage', { type: meta.type || '' }) : null;
+      await c.delete('inbox-meta'); await c.delete('inbox-file');
+      if (blob) return receiveBlob(blob);
+      const txt = ((meta.url || '') + ' ' + (meta.text || '')).trim();
+      const m = txt.match(/https?:\/\/\S+/);
+      if (m) { S.tab = 'recipes'; render(); return importUrl(m[0]); }
+      if (txt) { S.tab = 'recipes'; render(); return importText(txt); }
+    } catch (e) { console.error(e); toast('Partage illisible'); }
+    return;
+  }
+  // Ancien partage (GET) : ?url=…&text=…
   if (sp.has('url') || sp.has('text')) {
     const blob = (sp.get('url') || '') + ' ' + (sp.get('text') || '');
     try { history.replaceState(null, '', appBase()); } catch { }
@@ -1051,6 +1187,6 @@ async function start() {
   if (!Prefs.get('name') && !location.hash.startsWith('#c=')) askName();
   await checkIncoming();
   window.addEventListener('hashchange', checkIncoming);
-  if ('serviceWorker' in navigator && location.protocol === 'https:') { try { navigator.serviceWorker.register('sw.js').catch(() => { }); } catch { } }
+  if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) { try { navigator.serviceWorker.register('sw.js').catch(() => { }); } catch { } }
 }
 start();
